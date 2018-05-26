@@ -1,0 +1,7 @@
+[package]
+name = "sandpile"
+version = "0.2.0"
+authors = ["Андрей Заболотский"]
+
+[dependencies]
+repng="0.2.2"
