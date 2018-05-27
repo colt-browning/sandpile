@@ -44,15 +44,7 @@ impl FiniteGrid {
 
 impl fmt::Display for FiniteGrid {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		let vis = vec![" ", ".", ":", "&"];
-		let mut s = String::new();
-		for row in self.graph.iter() {
-			for el in row {
-				s += vis[*el as usize];
-			}
-			s += "\n";
-		}
-		write!(f, "{}", s)
+		write!(f, "{}", fmt_graph(&self.graph))
 	}
 }
 
@@ -153,17 +145,8 @@ impl ToroidalGrid {
 }
 
 impl fmt::Display for ToroidalGrid {
-	// TODO: вынести в глобальную функцию, которую уже засунуть в impl fmt::Display всем
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		let vis = vec![" ", ".", ":", "&"];
-		let mut s = String::new();
-		for row in self.graph.iter() {
-			for el in row {
-				s += vis[*el as usize];
-			}
-			s += "\n";
-		}
-		write!(f, "{}", s)
+		write!(f, "{}", fmt_graph(&self.graph))
 	}
 }
 
@@ -268,4 +251,16 @@ pub fn png(graph: &Vec<Vec<u8>>, fname: &str) -> Result<(), io::Error> {
 		}
 	}
 	repng::encode(File::create(fname)?, graph[0].len() as u32, graph.len() as u32, &pixels)
+}
+
+fn fmt_graph(graph: &Vec<Vec<u8>>) -> String {
+	let vis = vec![" ", ".", ":", "&"];
+	let mut s = String::new();
+	for row in graph.iter() {
+		for el in row {
+			s += vis[*el as usize];
+		}
+		s += "\n";
+	}
+	s
 }
