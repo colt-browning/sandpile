@@ -9,12 +9,11 @@ use std::{
 
 const ADD_ERR_MSG: &str = "Attempt to add sandpiles on grids of different sizes.";
 
-pub trait Sandpile {
+pub trait Sandpile: PartialEq + Clone {
 	fn topple(&mut self) -> u64;
 	fn neutral(usize, usize) -> Self;
 	fn add(&mut self, &Self) -> Result<(), &str>;
 	fn order(&self) -> u64
-		where Self: PartialEq + Clone
 	{
 		let mut a = self.clone();
 		a.add(self).unwrap();
@@ -25,7 +24,7 @@ pub trait Sandpile {
 		}
 		count
 	}
-	fn to_graph(self) -> Vec<Vec<u8>>;
+	fn into_graph(self) -> Vec<Vec<u8>>;
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,11 +33,22 @@ pub struct FiniteGrid {
 }
 
 impl FiniteGrid {
-	fn new(graph: Vec<Vec<u8>>) -> FiniteGrid {
-	// TODO: Возвращать ошибку, если длины рядов не все равны
-		FiniteGrid {
-			graph,
+	fn from_graph(graph: Vec<Vec<u8>>) -> Result<FiniteGrid, &'static str> {
+		if graph.is_empty() {
+			return Err("Empty graph");
 		}
+		let l = graph[0].len();
+		if l == 0 {
+			return Err("Empty first row");
+		}
+		for row in &graph {
+			if row.len() != l {
+				return Err("Rows of unequal lengths");
+			}
+		}
+		Ok(FiniteGrid {
+			graph,
+		})
 	}
 }
 
@@ -112,7 +122,7 @@ impl Sandpile for FiniteGrid {
 	
 	fn neutral(x: usize, y: usize) -> FiniteGrid {
 	// Proposition 6.36 of http://people.reed.edu/~davidp/divisors_and_sandpiles/
-		let mut grid = FiniteGrid::new(vec![vec![6; x]; y]);
+		let mut grid = FiniteGrid::from_graph(vec![vec![6; x]; y]).unwrap(); // TODO: ?
 		grid.topple();
 		for mut row in grid.graph.iter_mut() {
 			for mut el in row {
@@ -123,7 +133,7 @@ impl Sandpile for FiniteGrid {
 		grid
 	}
 
-	fn to_graph(self) -> Vec<Vec<u8>> {
+	fn into_graph(self) -> Vec<Vec<u8>> {
 		self.graph
 	}
 }
@@ -135,12 +145,24 @@ pub struct ToroidalGrid {
 }
 
 impl ToroidalGrid {
-	fn new(mut graph: Vec<Vec<u8>>) -> ToroidalGrid {
-	// TODO: Возвращать ошибку, если длины рядов не все равны
-		graph[0][0] = 0;
-		ToroidalGrid {
-			graph,
+	fn from_graph(graph: Vec<Vec<u8>>) -> Result<ToroidalGrid, &'static str> {
+		if graph.is_empty() {
+			return Err("Empty graph");
 		}
+		let l = graph[0].len();
+		if l == 0 {
+			return Err("Empty first row");
+		}
+		for row in &graph {
+			if row.len() != l {
+				return Err("Rows of unequal lengths");
+			}
+		}
+		let mut g = ToroidalGrid {
+			graph,
+		};
+		g.graph[0][0] = 0;
+		Ok(g)
 	}
 }
 
@@ -205,7 +227,7 @@ impl Sandpile for ToroidalGrid {
 	
 	fn add(&mut self, p: &ToroidalGrid) -> Result<(), &str> {
 		if p.graph.len() != self.graph.len() || p.graph[0].len() != self.graph[0].len() {
-			return Err(&ADD_ERR_MSG);
+			return Err(ADD_ERR_MSG);
 		}
 		for i in 0..self.graph.len() {
 			for j in 0..self.graph[0].len() {
@@ -218,7 +240,7 @@ impl Sandpile for ToroidalGrid {
 	
 	fn neutral(x: usize, y: usize) -> ToroidalGrid {
 	// Proposition 6.36 of http://people.reed.edu/~davidp/divisors_and_sandpiles/
-		let mut grid = ToroidalGrid::new(vec![vec![6; x]; y]);
+		let mut grid = ToroidalGrid::from_graph(vec![vec![6; x]; y]).unwrap(); // TODO: ?
 		grid.topple();
 		for mut row in grid.graph.iter_mut() {
 			for mut el in row {
@@ -230,13 +252,13 @@ impl Sandpile for ToroidalGrid {
 		grid
 	}
 
-	fn to_graph(self) -> Vec<Vec<u8>> {
+	fn into_graph(self) -> Vec<Vec<u8>> {
 		self.graph
 	}
 }
 
 pub fn png(graph: &Vec<Vec<u8>>, fname: &str) -> Result<(), io::Error> {
-	let colors = vec![
+	let colors = [
 		[0, 0, 0, 255],
 		[64, 128, 0, 255],
 		[118, 8, 170, 255],
@@ -254,7 +276,7 @@ pub fn png(graph: &Vec<Vec<u8>>, fname: &str) -> Result<(), io::Error> {
 }
 
 fn fmt_graph(graph: &Vec<Vec<u8>>) -> String {
-	let vis = vec![" ", ".", ":", "&"];
+	let vis = [" ", ".", ":", "&"];
 	let mut s = String::new();
 	for row in graph.iter() {
 		for el in row {

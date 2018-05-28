@@ -84,7 +84,7 @@ fn main() {
 				print!("{}", a);
 			}
 			if out_png {
-				let g = a.to_graph();
+				let g = a.into_graph();
 				if let Err(e) = png(&g, &filename) {
 					println!("Can't write to file {}. {}", filename, e);
 				}
@@ -96,7 +96,7 @@ fn main() {
 				print!("{}", a);
 			}
 			if out_png {
-				let g = a.to_graph();
+				let g = a.into_graph();
 				if let Err(e) = png(&g, &filename) {
 					println!("Can't write to file {}. {}", filename, e);
 				}
