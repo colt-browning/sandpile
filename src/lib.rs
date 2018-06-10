@@ -9,12 +9,14 @@ use std::{
 
 const ADD_ERR_MSG: &str = "Attempt to add sandpiles on grids of different sizes.";
 
-pub trait Sandpile: PartialEq + Clone {
+pub trait Sandpile: fmt::Display {
 	fn topple(&mut self) -> u64;
-	fn neutral(usize, usize) -> Self;
-	fn add(&mut self, &Self) -> Result<(), &str>;
-	fn order(&self) -> u64
+	fn neutral(usize, usize) -> Self where Self: Sized;
+	fn add(&mut self, &Self) -> Result<(), &str> where Self: Sized;
+	fn order(&self) -> u64 where Self: PartialEq + Clone
 	{
+	// TODO?: учесть, что self может и не быть элементом группы, а только элементом моноида
+	// проверяется прибавлением к id, наверное
 		let mut a = self.clone();
 		a.add(self).unwrap();
 		let mut count = 1;
@@ -24,32 +26,13 @@ pub trait Sandpile: PartialEq + Clone {
 		}
 		count
 	}
-	fn into_graph(self) -> Vec<Vec<u8>>;
+	fn from_graph(Vec<Vec<u8>>) -> Result<Self, &'static str> where Self: Sized;
+	fn into_graph(self: Box<Self>) -> Vec<Vec<u8>>;
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct FiniteGrid {
 	graph: Vec<Vec<u8>>,
-}
-
-impl FiniteGrid {
-	fn from_graph(graph: Vec<Vec<u8>>) -> Result<FiniteGrid, &'static str> {
-		if graph.is_empty() {
-			return Err("Empty graph");
-		}
-		let l = graph[0].len();
-		if l == 0 {
-			return Err("Empty first row");
-		}
-		for row in &graph {
-			if row.len() != l {
-				return Err("Rows of unequal lengths");
-			}
-		}
-		Ok(FiniteGrid {
-			graph,
-		})
-	}
 }
 
 impl fmt::Display for FiniteGrid {
@@ -57,6 +40,14 @@ impl fmt::Display for FiniteGrid {
 		write!(f, "{}", fmt_graph(&self.graph))
 	}
 }
+
+impl PartialEq for FiniteGrid {
+	fn eq(&self, other: &FiniteGrid) -> bool {
+		self.graph == other.graph
+	}
+}
+
+impl Eq for FiniteGrid {}
 
 impl Sandpile for FiniteGrid {
 	fn topple(&mut self) -> u64 {
@@ -75,6 +66,9 @@ impl Sandpile for FiniteGrid {
 			for c in excessive.drain() {
 				let (i, j) = c;
 				let d = self.graph[i][j] / 4;
+				if d == 0 {
+					continue;
+				}
 				self.graph[i][j] %= 4;
 				count += d as u64;
 				if i > 0 {
@@ -107,6 +101,24 @@ impl Sandpile for FiniteGrid {
 		count
 	}
 	
+	fn from_graph(graph: Vec<Vec<u8>>) -> Result<FiniteGrid, &'static str> {
+		if graph.is_empty() {
+			return Err("Empty graph");
+		}
+		let l = graph[0].len();
+		if l == 0 {
+			return Err("Empty first row");
+		}
+		for row in &graph {
+			if row.len() != l {
+				return Err("Rows of unequal lengths");
+			}
+		}
+		Ok(FiniteGrid {
+			graph,
+		})
+	}
+
 	fn add(&mut self, p: &FiniteGrid) -> Result<(), &str> {
 		if p.graph.len() != self.graph.len() || p.graph[0].len() != self.graph[0].len() {
 			return Err(ADD_ERR_MSG);
@@ -133,37 +145,15 @@ impl Sandpile for FiniteGrid {
 		grid
 	}
 
-	fn into_graph(self) -> Vec<Vec<u8>> {
+	fn into_graph(self: Box<Self>) -> Vec<Vec<u8>> {
 		self.graph
 	}
 }
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct ToroidalGrid {
 	graph: Vec<Vec<u8>>,
-}
-
-impl ToroidalGrid {
-	fn from_graph(graph: Vec<Vec<u8>>) -> Result<ToroidalGrid, &'static str> {
-		if graph.is_empty() {
-			return Err("Empty graph");
-		}
-		let l = graph[0].len();
-		if l == 0 {
-			return Err("Empty first row");
-		}
-		for row in &graph {
-			if row.len() != l {
-				return Err("Rows of unequal lengths");
-			}
-		}
-		let mut g = ToroidalGrid {
-			graph,
-		};
-		g.graph[0][0] = 0;
-		Ok(g)
-	}
 }
 
 impl fmt::Display for ToroidalGrid {
@@ -171,6 +161,14 @@ impl fmt::Display for ToroidalGrid {
 		write!(f, "{}", fmt_graph(&self.graph))
 	}
 }
+
+impl PartialEq for ToroidalGrid {
+	fn eq(&self, other: &ToroidalGrid) -> bool {
+		self.graph == other.graph
+	}
+}
+
+impl Eq for ToroidalGrid {}
 
 impl Sandpile for ToroidalGrid {
 	fn topple(&mut self) -> u64 {
@@ -189,6 +187,9 @@ impl Sandpile for ToroidalGrid {
 			for c in excessive.drain() {
 				let (i, j) = c;
 				let d = self.graph[i][j] / 4;
+				if d == 0 {
+					continue;
+				}
 				self.graph[i][j] %= 4;
 				count += d as u64;
 				let i1 = if i > 0 {i-1} else {self.graph.len()-1};
@@ -225,6 +226,26 @@ impl Sandpile for ToroidalGrid {
 		count
 	}
 	
+	fn from_graph(graph: Vec<Vec<u8>>) -> Result<ToroidalGrid, &'static str> {
+		if graph.is_empty() {
+			return Err("Empty graph");
+		}
+		let l = graph[0].len();
+		if l == 0 {
+			return Err("Empty first row");
+		}
+		for row in &graph {
+			if row.len() != l {
+				return Err("Rows of unequal lengths");
+			}
+		}
+		let mut g = ToroidalGrid {
+			graph,
+		};
+		g.graph[0][0] = 0;
+		Ok(g)
+	}
+
 	fn add(&mut self, p: &ToroidalGrid) -> Result<(), &str> {
 		if p.graph.len() != self.graph.len() || p.graph[0].len() != self.graph[0].len() {
 			return Err(ADD_ERR_MSG);
@@ -252,7 +273,7 @@ impl Sandpile for ToroidalGrid {
 		grid
 	}
 
-	fn into_graph(self) -> Vec<Vec<u8>> {
+	fn into_graph(self: Box<Self>) -> Vec<Vec<u8>> {
 		self.graph
 	}
 }

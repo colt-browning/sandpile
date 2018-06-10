@@ -77,30 +77,17 @@ fn main() {
 			}
 		}
 	} else { String::new() };
-	match grid_type {
-		GridType::Finite => {
-			let a = FiniteGrid::neutral(x, y);
-			if out_ascii {
-				print!("{}", a);
-			}
-			if out_png {
-				let g = a.into_graph();
-				if let Err(e) = png(&g, &filename) {
-					println!("Can't write to file {}. {}", filename, e);
-				}
-			}
-		},
-		GridType::Toroidal => {
-			let a = ToroidalGrid::neutral(x, y);
-			if out_ascii {
-				print!("{}", a);
-			}
-			if out_png {
-				let g = a.into_graph();
-				if let Err(e) = png(&g, &filename) {
-					println!("Can't write to file {}. {}", filename, e);
-				}
-			}
-		}
+	let a: Box<Sandpile> = match grid_type {
+		GridType::Finite => Box::new(FiniteGrid::neutral(x, y)),
+		GridType::Toroidal => Box::new(ToroidalGrid::neutral(x, y)),
 	};
+	if out_ascii {
+		print!("{}", a);
+	}
+	if out_png {
+		let g = a.into_graph();
+		if let Err(e) = png(&g, &filename) {
+			println!("Can't write to file {}. {}", filename, e);
+		}
+	}
 }
