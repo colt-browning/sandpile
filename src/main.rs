@@ -1,17 +1,10 @@
 extern crate sandpile;
 
 use sandpile::{
-	Sandpile,
-	FiniteGrid,
-	ToroidalGrid,
+	GridType,
+	GridSandpile,
 	png,
 };
-
-#[derive(Debug)]
-enum GridType {
-	Finite,
-	Toroidal,
-}
 
 fn main() {
 	let mut args = std::env::args().skip(1);
@@ -77,15 +70,12 @@ fn main() {
 			}
 		}
 	} else { String::new() };
-	let a: Box<Sandpile> = match grid_type {
-		GridType::Finite => Box::new(FiniteGrid::neutral(x, y)),
-		GridType::Toroidal => Box::new(ToroidalGrid::neutral(x, y)),
-	};
+	let a = GridSandpile::neutral(grid_type, (x, y));
 	if out_ascii {
 		print!("{}", a);
 	}
 	if out_png {
-		let g = a.into_graph();
+		let g = a.into_grid();
 		if let Err(e) = png(&g, &filename) {
 			println!("Can't write to file {}. {}", filename, e);
 		}
