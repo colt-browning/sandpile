@@ -105,38 +105,38 @@ impl GridSandpile {
 				}
 				self.grid[i][j] %= 4;
 				count += d as u64;
-				let mut topple_to = HashSet::new();
+				let mut topple_to = Vec::new();
 				match self.grid_type {
 					GridType::Finite => {
 						if i > 0 {
-							topple_to.insert((i-1, j));
+							topple_to.push((i-1, j));
 						}
 						if j > 0 {
-							topple_to.insert((i, j-1));
+							topple_to.push((i, j-1));
 						}
 						if i < self.grid.len()-1 {
-							topple_to.insert((i+1, j));
+							topple_to.push((i+1, j));
 						}
 						if j < self.grid[i].len()-1 {
-							topple_to.insert((i, j+1));
+							topple_to.push((i, j+1));
 						}
 					},
 					GridType::Toroidal => {
 						let i1 = if i > 0 {i-1} else {self.grid.len()-1};
 						if !(i1 == 0 && j == 0) {
-							topple_to.insert((i1, j));
+							topple_to.push((i1, j));
 						}
 						let j1 = if j > 0 {j-1} else {self.grid[0].len()-1};
 						if !(i == 0 && j1 == 0) {
-							topple_to.insert((i, j1));
+							topple_to.push((i, j1));
 						}
 						let i1 = if i < self.grid.len()-1 {i+1} else {0};
 						if !(i1 == 0 && j == 0) {
-							topple_to.insert((i1, j));
+							topple_to.push((i1, j));
 						}
 						let j1 = if j < self.grid[i].len()-1 {j+1} else {0};
 						if !(i == 0 && j1 == 0) {
-							topple_to.insert((i, j1));
+							topple_to.push((i, j1));
 						}
 					},
 				};
