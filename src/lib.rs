@@ -5,12 +5,13 @@ use std::{
 	io,
 	fs::File,
 	fmt,
+	error::Error,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GridType {
-	Finite,
-	Toroidal,
+	Finite,		// Finite rectangular grid with sink all around the grid.
+	Toroidal,	// Toroidal rectangular grid with sink at the top-left node.
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,22 +22,31 @@ pub struct GridSandpile {
 
 impl fmt::Display for GridSandpile {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "{}", fmt_grid(&self.grid))
+		let vis = [" ", ".", ":", "&"];
+		let mut s = String::new();
+		for row in &self.grid {
+			for el in row {
+				s += vis[*el as usize];
+			}
+			s += "\n";
+		}
+		write!(f, "{}", s)
 	}
 }
 
 impl GridSandpile {
-	pub fn from_grid(grid_type: GridType, grid: Vec<Vec<u8>>) -> Result<GridSandpile, &'static str> {
+	pub fn from_grid(grid_type: GridType, grid: Vec<Vec<u8>>) -> Result<GridSandpile, SandpileError> {
 		if grid.is_empty() {
-			return Err("Zero-size grid");
+			return Err(SandpileError::EmptyGrid(grid));
 		}
 		let l = grid[0].len();
 		if l == 0 {
-			return Err("Empty first row");
+			return Err(SandpileError::EmptyFirstRow(grid));
 		}
-		for row in &grid {
-			if row.len() != l {
-				return Err("Rows of unequal lengths");
+		for i in 1..grid.len() {
+			let l2 = grid[i].len();
+			if l2 != l {
+				return Err(SandpileError::UnequalRowLengths(grid, l, i, l2));
 			}
 		}
 		let mut sandpile = GridSandpile {
@@ -49,19 +59,20 @@ impl GridSandpile {
 		Ok(sandpile)
 	}
 
-	pub fn add(&mut self, p: &GridSandpile) -> Result<(), &str> {
-		if p.grid_type != self.grid_type
-		|| p.grid.len() != self.grid.len()
-		|| p.grid[0].len() != self.grid[0].len() {
-			return Err(ADD_ERR_MSG);
+	pub fn add(&mut self, p: &GridSandpile) -> Result<u64, SandpileError> {
+		if p.grid_type != self.grid_type {
+			return Err(SandpileError::UnequalTypes(self.grid_type, p.grid_type));
+		}
+		if p.grid.len() != self.grid.len() || p.grid[0].len() != self.grid[0].len() {
+			return Err(SandpileError::UnequalDimensions(
+			self.grid.len(), self.grid[0].len(), p.grid.len(), p.grid[0].len()));
 		}
 		for i in 0..self.grid.len() {
 			for j in 0..self.grid[0].len() {
 				self.grid[i][j] += p.grid[i][j];
 			}
 		}
-		self.topple();
-		Ok(())
+		Ok(self.topple())
 	}
 	
 	pub fn neutral(grid_type: GridType, (x, y): (usize, usize)) -> GridSandpile {
@@ -171,7 +182,59 @@ impl GridSandpile {
 	}
 }
 
-const ADD_ERR_MSG: &str = "Attempt to add sandpiles on grids of different sizes.";
+#[derive(Debug)]
+pub enum SandpileError {
+	EmptyGrid(Vec<Vec<u8>>),
+	EmptyFirstRow(Vec<Vec<u8>>),
+	UnequalRowLengths(Vec<Vec<u8>>, usize, usize, usize),
+	UnequalTypes(GridType, GridType),
+	UnequalDimensions(usize, usize, usize, usize),
+}
+
+impl fmt::Display for SandpileError {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		match *self {
+			SandpileError::EmptyGrid(_) => write!(f, "Vector of vectors is empty."),
+			SandpileError::EmptyFirstRow(_) => write!(f, "Vector of vectors has empty initial row."),
+			SandpileError::UnequalRowLengths(_, expected, n, got) =>
+				write!(f, "Vector of vectors does not represent rectangular matrix: initial row has length {}, row {} has length {}.",
+					expected, n, got),
+			SandpileError::UnequalTypes(expected, got) =>
+				write!(f, "Adding sandpiles on grids of different types: {:?} and {:?}.", expected, got),
+			SandpileError::UnequalDimensions(self_x, self_y, other_x, other_y) =>
+				write!(f, "Adding sandpiles on grids of different sizes: {}x{} and {}x{}.",
+					self_x, self_y, other_x, other_y),
+		}
+	}
+}
+
+impl Error for SandpileError {
+	fn description(&self) -> &str {
+		match *self {
+			SandpileError::EmptyGrid(_) => "empty grid",
+			SandpileError::EmptyFirstRow(_) => "empty first row",
+			SandpileError::UnequalRowLengths(_, _, _, _) => "unequal row lengths",
+			SandpileError::UnequalTypes(_, _) => "unequal types",
+			SandpileError::UnequalDimensions(_, _, _, _) => "unequal dimensions",
+		}
+	}
+	
+	fn cause(&self) -> Option<&Error> {
+		None
+	}
+}
+
+impl SandpileError {
+	pub fn into_grid(self) -> Option<Vec<Vec<u8>>> {
+		match self {
+			SandpileError::EmptyGrid(grid)
+			| SandpileError::EmptyFirstRow(grid)
+			| SandpileError::UnequalRowLengths(grid, _, _, _) =>
+				Some(grid),
+			_ => None,
+		}
+	}
+}
 
 pub fn png(grid: &Vec<Vec<u8>>, fname: &str) -> Result<(), io::Error> {
 	let colors = [
@@ -189,16 +252,4 @@ pub fn png(grid: &Vec<Vec<u8>>, fname: &str) -> Result<(), io::Error> {
 		}
 	}
 	repng::encode(File::create(fname)?, grid[0].len() as u32, grid.len() as u32, &pixels)
-}
-
-fn fmt_grid(grid: &Vec<Vec<u8>>) -> String {
-	let vis = [" ", ".", ":", "&"];
-	let mut s = String::new();
-	for row in grid {
-		for el in row {
-			s += vis[*el as usize];
-		}
-		s += "\n";
-	}
-	s
 }
