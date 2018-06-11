@@ -39,7 +39,7 @@ impl Config {
 		args.next();
 		let grid_type = match args.next() {
 			Some(ref s) if s == "finite" => GridType::Finite,
-			Some(ref s) if s == "torus"  => GridType::Toroidal,
+			Some(ref s) if s == "torus" || s == "toroidal"  => GridType::Toroidal,
 			_ => return Err("\
 Please specify grid type ('finite' or 'torus') as the 1st command line argument.
 Example of a correct call (with cargo, use 'cargo run --release' instead of 'sandpile'):

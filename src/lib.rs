@@ -253,3 +253,22 @@ pub fn png(grid: &Vec<Vec<u8>>, fname: &str) -> Result<(), io::Error> {
 	}
 	repng::encode(File::create(fname)?, grid[0].len() as u32, grid.len() as u32, &pixels)
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn id_finite() {
+		let s = GridSandpile::neutral(GridType::Finite, (3, 2));
+		let g = s.into_grid();
+		assert_eq!(g, vec![vec![2, 1, 2], vec![2, 1, 2]]);
+	}
+	
+	#[test]
+	fn id_torus() {
+		let s = GridSandpile::neutral(GridType::Toroidal, (3, 2));
+		let g = s.into_grid();
+		assert_eq!(g, vec![vec![0, 3, 3], vec![2, 1, 1]]);
+	}
+}
