@@ -18,10 +18,14 @@ fn main() {
 	if config.out_ascii {
 		print!("{}", a);
 	}
-	if let Some(filename) = config.out_png {
+	if let Some(mut filename) = config.out_png {
 		let g = a.into_grid();
-		if let Err(e) = png(&g, &filename) {
+		while let Err(e) = png(&g, &filename) {
 			println!("Can't write to file {}. {}", filename, e);
+			println!("Please enter correct name for output file:");
+			filename = String::new();
+			std::io::stdin().read_line(&mut filename).unwrap();
+			filename = filename.trim().to_string();
 		}
 	}
 }
