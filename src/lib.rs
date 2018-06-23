@@ -37,7 +37,7 @@ impl fmt::Display for GridSandpile {
 impl GridSandpile {
 	pub fn from_grid(grid_type: GridType, grid: Vec<Vec<u8>>) -> Result<GridSandpile, SandpileError> {
 		if grid.is_empty() {
-			return Err(SandpileError::EmptyGrid(grid));
+			return Err(SandpileError::EmptyGrid);
 		}
 		let l = grid[0].len();
 		if l == 0 {
@@ -57,6 +57,27 @@ impl GridSandpile {
 			sandpile.grid[0][0] = 0;
 		}
 		Ok(sandpile)
+	}
+
+	pub fn from_string(grid_type: GridType, (x, y): (usize, usize), s: String) -> Result<GridSandpile, SandpileError> {
+		let mut g = Vec::new();
+		for line in s.lines() {
+			let mut row = Vec::new();
+			for ch in line.chars() {
+				row.push(match ch {
+					' ' => 0,
+					'.' => 1,
+					':' => 2,
+					'&' => 3,
+					_ => return Err(SandpileError::UnknownSymbol(ch))
+				});
+			}
+			g.push(row);
+		}
+		if y == 0 || x == 0 || g.len() == 0 {
+			return Err(SandpileError::EmptyGrid);
+		}
+		GridSandpile::from_grid(grid_type, g)
 	}
 
 	pub fn add(&mut self, p: &GridSandpile) -> Result<u64, SandpileError> {
@@ -184,26 +205,28 @@ impl GridSandpile {
 
 #[derive(Debug)]
 pub enum SandpileError {
-	EmptyGrid(Vec<Vec<u8>>),
+	EmptyGrid,
 	EmptyFirstRow(Vec<Vec<u8>>),
 	UnequalRowLengths(Vec<Vec<u8>>, usize, usize, usize),
 	UnequalTypes(GridType, GridType),
 	UnequalDimensions(usize, usize, usize, usize),
+	UnknownSymbol(char),
 }
 
 impl fmt::Display for SandpileError {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		match *self {
-			SandpileError::EmptyGrid(_) => write!(f, "Vector of vectors is empty."),
-			SandpileError::EmptyFirstRow(_) => write!(f, "Vector of vectors has empty initial row."),
+			SandpileError::EmptyGrid => write!(f, "Attempt to build a sandpile upon zero-size grid."),
+			SandpileError::EmptyFirstRow(_) => write!(f, "Grid has empty initial row."),
 			SandpileError::UnequalRowLengths(_, expected, n, got) =>
-				write!(f, "Vector of vectors does not represent rectangular matrix: initial row has length {}, row {} has length {}.",
+				write!(f, "Grid (vector of vectors) does not represent rectangular matrix: initial row has length {}, row {} has length {}.",
 					expected, n, got),
 			SandpileError::UnequalTypes(expected, got) =>
 				write!(f, "Adding sandpiles on grids of different types: {:?} and {:?}.", expected, got),
 			SandpileError::UnequalDimensions(self_x, self_y, other_x, other_y) =>
 				write!(f, "Adding sandpiles on grids of different sizes: {}x{} and {}x{}.",
 					self_x, self_y, other_x, other_y),
+			SandpileError::UnknownSymbol(ch) => write!(f, "Unknown symbol: {}", ch),
 		}
 	}
 }
@@ -211,11 +234,12 @@ impl fmt::Display for SandpileError {
 impl Error for SandpileError {
 	fn description(&self) -> &str {
 		match *self {
-			SandpileError::EmptyGrid(_) => "empty grid",
+			SandpileError::EmptyGrid => "empty grid",
 			SandpileError::EmptyFirstRow(_) => "empty first row",
 			SandpileError::UnequalRowLengths(_, _, _, _) => "unequal row lengths",
 			SandpileError::UnequalTypes(_, _) => "unequal types",
 			SandpileError::UnequalDimensions(_, _, _, _) => "unequal dimensions",
+			SandpileError::UnknownSymbol(_) => "unknown symbol",
 		}
 	}
 	
@@ -227,8 +251,7 @@ impl Error for SandpileError {
 impl SandpileError {
 	pub fn into_grid(self) -> Option<Vec<Vec<u8>>> {
 		match self {
-			SandpileError::EmptyGrid(grid)
-			| SandpileError::EmptyFirstRow(grid)
+			SandpileError::EmptyFirstRow(grid)
 			| SandpileError::UnequalRowLengths(grid, _, _, _) =>
 				Some(grid),
 			_ => None,

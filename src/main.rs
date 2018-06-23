@@ -6,6 +6,11 @@ use sandpile::{
 	png,
 };
 
+use std::{
+	io,
+	error::Error
+};
+
 fn main() {
 	let config = match Config::new(&mut std::env::args()) {
 		Ok(config) => config,
@@ -14,7 +19,22 @@ fn main() {
 			return
 		}
 	};
-	let a = GridSandpile::neutral(config.grid_type, config.dimensions);
+	let a = match config.action {
+		Action::Id => GridSandpile::neutral(config.grid_type, config.dimensions),
+		Action::Read => match || -> Result<GridSandpile, Box<Error>> {
+			let mut g = String::new();
+			for _ in 0..config.dimensions.1 {
+				io::stdin().read_line(&mut g)?;
+			}
+			Ok(GridSandpile::from_string(config.grid_type, config.dimensions, g)?)
+		}() {
+			Ok(x) => x,
+			Err(e) => {
+				println!("{}", e);
+				return
+			}
+		}
+	};
 	if config.out_ascii {
 		print!("{}", a);
 	}
@@ -24,7 +44,11 @@ fn main() {
 			println!("Can't write to file {}. {}", filename, e);
 			println!("Please enter correct name for output file:");
 			filename = String::new();
-			std::io::stdin().read_line(&mut filename).unwrap();
+			if let Err(e) =
+				io::stdin().read_line(&mut filename) {
+				println!("{}", e);
+				return
+			};
 			filename = filename.trim().to_string();
 		}
 	}
@@ -36,6 +60,13 @@ struct Config {
 	dimensions: (usize, usize),
 	out_ascii: bool,
 	out_png: Option<String>,
+	action: Action,
+}
+
+#[derive(Debug)]
+enum Action {
+	Id,
+	Read,
 }
 
 impl Config {
@@ -73,9 +104,10 @@ sandpile finite 60x50 id ascii+png out/id.png")
 			Some(dim) => dim,
 			None => return Err("Please specify grid size (as '100' or '200x100') as the 2nd command line argument.")
 		};
-		match args.next() {
-			Some(ref s) if s == "id" => (),
-			_ => return Err("Please specify target (currenty only 'id' is supported) as the 3rd command line argument.")
+		let action = match args.next() {
+			Some(ref s) if s == "id" => Action::Id,
+			Some(ref s) if s == "read" => Action::Read,
+			_ => return Err("Please specify target ('id' or 'read') as the 3rd command line argument.")
 		};
 		let (out_ascii, out_png) = match args.next() {
 			Some(ref s) if s == "ascii" => (true, false),
@@ -94,6 +126,7 @@ sandpile finite 60x50 id ascii+png out/id.png")
 			dimensions: (x, y),
 			out_ascii,
 			out_png: if out_png { Some(filename) } else { None },
+			action,
 		})
 	}
 }
