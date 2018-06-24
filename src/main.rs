@@ -19,7 +19,7 @@ fn main() {
 			return
 		}
 	};
-	let a = match config.action {
+	let mut a = match config.action {
 		Action::Id => GridSandpile::neutral(config.grid_type, config.dimensions),
 		Action::Read => match || -> Result<GridSandpile, Box<Error>> {
 			let mut g = String::new();
@@ -35,6 +35,9 @@ fn main() {
 			}
 		}
 	};
+	if config.action == Action::Read {
+		a.topple();
+	}
 	if config.out_ascii {
 		print!("{}", a);
 	}
@@ -63,7 +66,7 @@ struct Config {
 	action: Action,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Action {
 	Id,
 	Read,

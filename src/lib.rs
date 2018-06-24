@@ -22,11 +22,11 @@ pub struct GridSandpile {
 
 impl fmt::Display for GridSandpile {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		let vis = [" ", ".", ":", "&"];
+		let vis = [" ", ".", ":", "&", "#"];
 		let mut s = String::new();
 		for row in &self.grid {
 			for el in row {
-				s += vis[*el as usize];
+				s += vis[if *el < 4 {*el} else {4} as usize];
 			}
 			s += "\n";
 		}
@@ -69,6 +69,7 @@ impl GridSandpile {
 					'.' => 1,
 					':' => 2,
 					'&' => 3,
+					'#' => 4,
 					_ => return Err(SandpileError::UnknownSymbol(ch))
 				});
 			}
