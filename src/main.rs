@@ -19,11 +19,12 @@ fn main() {
 			return
 		}
 	};
+	let (x, y) = config.dimensions;
 	let mut a = match config.action {
 		Action::Id => GridSandpile::neutral(config.grid_type, config.dimensions),
 		Action::Read => match || -> Result<GridSandpile, Box<Error>> {
 			let mut g = String::new();
-			for _ in 0..config.dimensions.1 {
+			for _ in 0..y {
 				io::stdin().read_line(&mut g)?;
 			}
 			Ok(GridSandpile::from_string(config.grid_type, config.dimensions, g)?)
@@ -33,11 +34,14 @@ fn main() {
 				println!("{}", e);
 				return
 			}
-		}
+		},
+		Action::All(n) => GridSandpile::from_grid(config.grid_type, vec![vec![n; x]; y]).unwrap(),
 	};
-	if config.action == Action::Read {
-		a.topple();
-	}
+	match config.action {
+		Action::Read => a.topple(),
+		Action::All(n) if n >= 4 => a.topple(),
+		_ => 0
+	};
 	if config.out_ascii {
 		print!("{}", a);
 	}
@@ -70,6 +74,7 @@ struct Config {
 enum Action {
 	Id,
 	Read,
+	All(u8),
 }
 
 impl Config {
@@ -107,10 +112,15 @@ sandpile finite 60x50 id ascii+png out/id.png")
 			Some(dim) => dim,
 			None => return Err("Please specify grid size (as '100' or '200x100') as the 2nd command line argument.")
 		};
+		let error = Err("Please specify target ('id', 'read', or 'all-N' where N is number) as the 3rd command line argument.");
 		let action = match args.next() {
 			Some(ref s) if s == "id" => Action::Id,
 			Some(ref s) if s == "read" => Action::Read,
-			_ => return Err("Please specify target ('id' or 'read') as the 3rd command line argument.")
+			Some(ref s) if s.starts_with("all-") => match s[4..].parse::<u8>() {
+				Ok(n) => Action::All(n),
+				Err(_) => return error,
+			},
+			_ => return error
 		};
 		let (out_ascii, out_png) = match args.next() {
 			Some(ref s) if s == "ascii" => (true, false),
