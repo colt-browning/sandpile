@@ -22,7 +22,7 @@ fn main() {
 	let (x, y) = config.dimensions;
 	let mut a = match config.action {
 		Action::Id => GridSandpile::neutral(config.grid_type, config.dimensions),
-		Action::Read => match || -> Result<GridSandpile, Box<Error>> {
+		Action::Read => match || -> Result<GridSandpile, Box<dyn Error>> {
 			let mut g = String::new();
 			for _ in 0..y {
 				io::stdin().read_line(&mut g)?;
@@ -35,10 +35,17 @@ fn main() {
 				return
 			}
 		},
+		Action::ReadList => match read_list(x, y) {
+			Ok(grid) => GridSandpile::from_grid(config.grid_type, grid).unwrap(),
+			Err(e) => {
+				println!("{}", e);
+				return
+			}
+		},
 		Action::All(n) => GridSandpile::from_grid(config.grid_type, vec![vec![n; x]; y]).unwrap(),
 	};
 	match config.action {
-		Action::Read => a.topple(),
+		Action::Read | Action::ReadList => a.topple(),
 		Action::All(n) if n >= 4 => a.topple(),
 		_ => 0
 	};
@@ -74,6 +81,7 @@ struct Config {
 enum Action {
 	Id,
 	Read,
+	ReadList,
 	All(u8),
 }
 
@@ -112,10 +120,11 @@ sandpile finite 60x50 id ascii+png out/id.png")
 			Some(dim) => dim,
 			None => return Err("Please specify grid size (as '100' or '200x100') as the 2nd command line argument.")
 		};
-		let error = Err("Please specify target ('id', 'read', or 'all-N' where N is number) as the 3rd command line argument.");
+		let error = Err("Please specify target ('id', 'read', 'read_list', or 'all-N' where N is number) as the 3rd command line argument.");
 		let action = match args.next() {
 			Some(ref s) if s == "id" => Action::Id,
 			Some(ref s) if s == "read" => Action::Read,
+			Some(ref s) if s == "read_list" => Action::ReadList,
 			Some(ref s) if s.starts_with("all-") => match s[4..].parse::<u8>() {
 				Ok(n) => Action::All(n),
 				Err(_) => return error,
@@ -142,4 +151,28 @@ sandpile finite 60x50 id ascii+png out/id.png")
 			action,
 		})
 	}
+}
+
+fn read_list(x: usize, y: usize) -> Result<Vec<Vec<u8>>, Box<dyn Error>> {
+	let mut g = String::new();
+	while !g.ends_with(".") {
+		io::stdin().read_line(&mut g)?;
+		g = g.trim_right().to_string();
+	}
+	let mut grid = vec![vec![0; x]; y];
+	for s in g[..g.len()-1].split_terminator(',') {
+		let ss: Vec<_> = s.split_whitespace().collect();
+		if ss.len() == 0 {
+			continue
+		}
+		if ss.len() != 2 {
+			return Err(format!("Expected 2 coordinates, got {}: {}", ss.len(), s).into())
+		}
+		let (xc, yc): (usize, usize) = (ss[0].parse()?, ss[1].parse()?);
+		if xc >= x || yc >= y {
+			return Err(format!("Coordinates ({}, {}) out of bounds (0..{}, 0..{})", xc, yc, x, y).into())
+		}
+		grid[yc][xc] += 1;
+	}
+	Ok(grid)
 }
