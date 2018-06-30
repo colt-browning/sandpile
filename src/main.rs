@@ -83,6 +83,7 @@ enum Action {
 	Read,
 	ReadList,
 	All(u8),
+//	_Inverse,
 }
 
 impl Config {
@@ -120,16 +121,16 @@ sandpile finite 60x50 id ascii+png out/id.png")
 			Some(dim) => dim,
 			None => return Err("Please specify grid size (as '100' or '200x100') as the 2nd command line argument.")
 		};
-		let error = Err("Please specify target ('id', 'read', 'read_list', or 'all-N' where N is number) as the 3rd command line argument.");
 		let action = match args.next() {
 			Some(ref s) if s == "id" => Action::Id,
 			Some(ref s) if s == "read" => Action::Read,
 			Some(ref s) if s == "read_list" => Action::ReadList,
 			Some(ref s) if s.starts_with("all-") => match s[4..].parse::<u8>() {
 				Ok(n) => Action::All(n),
-				Err(_) => return error,
+				Err(_e) => return Err("In target 'all-N', N must be a 8-bit number."),
 			},
-			_ => return error
+//			Some(ref s) if s == "_inverse" => Action::_Inverse,
+			_ => return Err("Please specify target ('id', 'read', 'read_list', or 'all-N' where N is number) as the 3rd command line argument.")
 		};
 		let (out_ascii, out_png) = match args.next() {
 			Some(ref s) if s == "ascii" => (true, false),
