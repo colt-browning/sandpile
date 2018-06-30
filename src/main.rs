@@ -57,6 +57,14 @@ fn main() {
 				}
 				stack.push(a)
 			},
+			Action::Add => {
+				let mut a = stack.pop().unwrap();
+				if let Err(e) = a.add(&stack.pop().unwrap()) {
+					println!("{}", e);
+					return
+				}
+				stack.push(a)
+			},
 		}
 	}
 	let a = stack.pop().unwrap();
@@ -94,12 +102,12 @@ enum Action {
 	Read,
 	ReadList,
 	All(u8),
-//	Add,
+	Add,
 //	_Inverse,
 }
 
 impl Config {
-	fn new(args: &mut std::iter::Iterator<Item = String>) -> Result<Config, &str> {
+	fn new(args: &mut std::iter::Iterator<Item = String>) -> Result<Config, String> {
 		args.next();
 		let grid_type = match args.next() {
 			Some(ref s) if s == "finite" => GridType::Finite,
@@ -107,7 +115,7 @@ impl Config {
 			_ => return Err("\
 Please specify grid type ('finite' or 'torus') as the 1st command line argument.
 Example of a correct call (with cargo, use 'cargo run --release' instead of 'sandpile'):
-sandpile finite 60x50 id ascii+png out/id.png")
+sandpile finite 60x50 id ascii+png out/id.png".to_owned())
 		};
 		let (x, y) = match || -> Option<_> {
 			let s = match args.next() {
@@ -131,7 +139,7 @@ sandpile finite 60x50 id ascii+png out/id.png")
 			None
 		}() {
 			Some(dim) => dim,
-			None => return Err("Please specify grid size (as '100' or '200x100') as the 2nd command line argument.")
+			None => return Err("Please specify grid size (as '100' or '200x100') as the 2nd command line argument.".to_owned())
 		};
 		let mut actions_expected = 1;
 		let mut actions = Vec::new();
@@ -139,10 +147,10 @@ sandpile finite 60x50 id ascii+png out/id.png")
 			let arg = match args.next() {
 				Some(s) => s,
 				None => return Err(if actions.is_empty() {
-					"Please specify target ('id', 'read', 'read_list', or 'all-N' where N is number) as the 3rd command line argument."
+					"Please specify target ('id', 'read', 'read_list', 'all-N', or 'add') as the 3rd command line argument."
 				} else {
 					"Target list terminated unexpectedly."
-				})
+				}.to_owned())
 			};
 			let (action, incr) = match arg.as_str() {
 				"id" => (Action::Id, 0),
@@ -150,25 +158,26 @@ sandpile finite 60x50 id ascii+png out/id.png")
 				"read_list" => (Action::ReadList, 0),
 				s if s.starts_with("all-") => match s[4..].parse::<u8>() {
 					Ok(n) => (Action::All(n), 0),
-					Err(_e) => return Err("In target 'all-N', N must be a 8-bit number."),
+					Err(_e) => return Err("In target 'all-N', N must be a 8-bit number.".to_owned()),
 				},
 	//			"_inverse" => Action::_Inverse,
-//				"add" => (Action::Add, 3),
-				_ => return Err("Unknown target.")
+				"add" => (Action::Add, 2),
+				s => return Err(format!("Unknown target: {}", s))
 			};
 			actions.push(action);
 			actions_expected += incr - 1;
 		}
 		let (out_ascii, out_png) = match args.next() {
 			Some(ref s) if s == "ascii" => (true, false),
+			None => (true, false),
 			Some(ref s) if s == "png" => (false, true),
 			Some(ref s) if s == "ascii+png" => (true, true),
-			_ => return Err("Please specify output format ('ascii', 'png', or 'ascii+png') after targets.")
+			Some(s) => return Err(format!("Please specify output format after targets. Expected 'ascii' (default), 'png', or 'ascii+png', got: {}", s))
 		};
 		let filename = if out_png {
 			match args.next() {
 				Some(s) => s,
-				None => return Err("Please specify name for output png file as the final command line argument.")
+				None => return Err("Please specify name for output png file as the final command line argument.".to_owned())
 			}
 		} else { String::new() };
 		Ok(Config {
