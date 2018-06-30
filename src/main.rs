@@ -12,7 +12,7 @@ use std::{
 };
 
 fn main() {
-	let config = match Config::new(&mut std::env::args()) {
+	let mut config = match Config::new(&mut std::env::args()) {
 		Ok(config) => config,
 		Err(e) => {
 			println!("{}", e);
@@ -20,35 +20,46 @@ fn main() {
 		}
 	};
 	let (x, y) = config.dimensions;
-	let mut a = match config.action {
-		Action::Id => GridSandpile::neutral(config.grid_type, config.dimensions),
-		Action::Read => match || -> Result<GridSandpile, Box<dyn Error>> {
-			let mut g = String::new();
-			for _ in 0..y {
-				io::stdin().read_line(&mut g)?;
-			}
-			Ok(GridSandpile::from_string(config.grid_type, config.dimensions, g)?)
-		}() {
-			Ok(x) => x,
-			Err(e) => {
-				println!("{}", e);
-				return
-			}
-		},
-		Action::ReadList => match read_list(x, y) {
-			Ok(grid) => GridSandpile::from_grid(config.grid_type, grid).unwrap(),
-			Err(e) => {
-				println!("{}", e);
-				return
-			}
-		},
-		Action::All(n) => GridSandpile::from_grid(config.grid_type, vec![vec![n; x]; y]).unwrap(),
-	};
-	match config.action {
-		Action::Read | Action::ReadList => a.topple(),
-		Action::All(n) if n >= 4 => a.topple(),
-		_ => 0
-	};
+	let mut stack = Vec::new();
+	while let Some(action) = config.actions.pop() {
+		match action {
+			Action::Id => stack.push(GridSandpile::neutral(config.grid_type, config.dimensions)),
+			Action::Read => match || -> Result<GridSandpile, Box<dyn Error>> {
+				let mut g = String::new();
+				for _ in 0..y {
+					io::stdin().read_line(&mut g)?;
+				}
+				let mut a = GridSandpile::from_string(config.grid_type, config.dimensions, g)?;
+				a.topple();
+				Ok(a)
+			}() {
+				Ok(x) => stack.push(x),
+				Err(e) => {
+					println!("{}", e);
+					return
+				}
+			},
+			Action::ReadList => match read_list(x, y) {
+				Ok(grid) => {
+					let mut a = GridSandpile::from_grid(config.grid_type, grid).unwrap();
+					a.topple();
+					stack.push(a);
+				},
+				Err(e) => {
+					println!("{}", e);
+					return
+				}
+			},
+			Action::All(n) => {
+				let mut a = GridSandpile::from_grid(config.grid_type, vec![vec![n; x]; y]).unwrap();
+				if n >= 4 {
+					a.topple();
+				}
+				stack.push(a)
+			},
+		}
+	}
+	let a = stack.pop().unwrap();
 	if config.out_ascii {
 		print!("{}", a);
 	}
@@ -74,15 +85,16 @@ struct Config {
 	dimensions: (usize, usize),
 	out_ascii: bool,
 	out_png: Option<String>,
-	action: Action,
+	actions: Vec<Action>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 enum Action {
 	Id,
 	Read,
 	ReadList,
 	All(u8),
+//	Add,
 //	_Inverse,
 }
 
@@ -121,27 +133,42 @@ sandpile finite 60x50 id ascii+png out/id.png")
 			Some(dim) => dim,
 			None => return Err("Please specify grid size (as '100' or '200x100') as the 2nd command line argument.")
 		};
-		let action = match args.next() {
-			Some(ref s) if s == "id" => Action::Id,
-			Some(ref s) if s == "read" => Action::Read,
-			Some(ref s) if s == "read_list" => Action::ReadList,
-			Some(ref s) if s.starts_with("all-") => match s[4..].parse::<u8>() {
-				Ok(n) => Action::All(n),
-				Err(_e) => return Err("In target 'all-N', N must be a 8-bit number."),
-			},
-//			Some(ref s) if s == "_inverse" => Action::_Inverse,
-			_ => return Err("Please specify target ('id', 'read', 'read_list', or 'all-N' where N is number) as the 3rd command line argument.")
-		};
+		let mut actions_expected = 1;
+		let mut actions = Vec::new();
+		while actions_expected > 0 {
+			let arg = match args.next() {
+				Some(s) => s,
+				None => return Err(if actions.is_empty() {
+					"Please specify target ('id', 'read', 'read_list', or 'all-N' where N is number) as the 3rd command line argument."
+				} else {
+					"Target list terminated unexpectedly."
+				})
+			};
+			let (action, incr) = match arg.as_str() {
+				"id" => (Action::Id, 0),
+				"read" => (Action::Read, 0),
+				"read_list" => (Action::ReadList, 0),
+				s if s.starts_with("all-") => match s[4..].parse::<u8>() {
+					Ok(n) => (Action::All(n), 0),
+					Err(_e) => return Err("In target 'all-N', N must be a 8-bit number."),
+				},
+	//			"_inverse" => Action::_Inverse,
+//				"add" => (Action::Add, 3),
+				_ => return Err("Unknown target.")
+			};
+			actions.push(action);
+			actions_expected += incr - 1;
+		}
 		let (out_ascii, out_png) = match args.next() {
 			Some(ref s) if s == "ascii" => (true, false),
 			Some(ref s) if s == "png" => (false, true),
 			Some(ref s) if s == "ascii+png" => (true, true),
-			_ => return Err("Please specify output format ('ascii', 'png', or 'ascii+png') as the 4th command line argument.")
+			_ => return Err("Please specify output format ('ascii', 'png', or 'ascii+png') after targets.")
 		};
 		let filename = if out_png {
 			match args.next() {
 				Some(s) => s,
-				None => return Err("Please specify name for output png file as the 5th command line argument.")
+				None => return Err("Please specify name for output png file as the final command line argument.")
 			}
 		} else { String::new() };
 		Ok(Config {
@@ -149,7 +176,7 @@ sandpile finite 60x50 id ascii+png out/id.png")
 			dimensions: (x, y),
 			out_ascii,
 			out_png: if out_png { Some(filename) } else { None },
-			action,
+			actions,
 		})
 	}
 }
