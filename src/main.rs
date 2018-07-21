@@ -57,6 +57,11 @@ fn main() {
 				}
 				stack.push(a)
 			},
+			Action::_Inverse => {
+				let a = stack.pop().unwrap();
+				let g = a._inverse();
+				stack.push(g);
+			}
 			Action::Add => {
 				let mut a = stack.pop().unwrap();
 				if let Err(e) = a.add(&stack.pop().unwrap()) {
@@ -72,8 +77,16 @@ fn main() {
 		}
 	}
 	let a = stack.pop().unwrap();
+	if config.eq {
+		let a2 = stack.pop().unwrap();
+		println!("{}", a == a2);
+		return
+	}
 	if config.out_ascii {
 		print!("{}", a);
+	}
+	if config.order {
+		println!("{}", a.order());
 	}
 	if let Some(mut filename) = config.out_png {
 		let g = a.into_grid();
@@ -97,6 +110,8 @@ struct Config {
 	dimensions: (usize, usize),
 	out_ascii: bool,
 	out_png: Option<String>,
+	eq: bool,
+	order: bool,
 	actions: Vec<Action>,
 }
 
@@ -108,7 +123,7 @@ enum Action {
 	All(u8),
 	Add,
 	Dup,
-//	_Inverse,
+	_Inverse,
 }
 
 impl Config {
@@ -146,15 +161,36 @@ sandpile finite 60x50 ascii+png id out/id.png".to_owned())
 			Some(dim) => dim,
 			None => return Err("Please specify grid size (as '100' or '200x100') as the 2nd command line argument.".to_owned())
 		};
-		let (out_ascii, out_png) = match args.next() {
-			Some(ref s) if s == "ascii" => (true, false),
-			None => (true, false),
-			Some(ref s) if s == "png" => (false, true),
-			Some(ref s) if s == "ascii+png" => (true, true),
-			Some(s) => return Err(format!("Please specify output format. Expected 'ascii' (default), 'png', or 'ascii+png', got: {}", s))
-		};
-		let mut actions_expected = 1;
+		let mut out_ascii = false;
+		let mut out_png = false;
+		let mut order = false;
+		let mut eq = false;
 		let mut actions = Vec::new();
+		let mut actions_expected = 1;
+		if let Some(s) = args.next() {
+			if s == "eq" {
+				eq = true;
+				actions_expected = 2;
+			} else if s == "recurrent" {
+				eq = true;
+				actions = vec![Action::Add, Action::Id, Action::Dup];
+			} else {
+				for out in s.split("+") {
+					match out {
+						"ascii" => out_ascii = true,
+						"png" => out_png = true,
+						"order" => order = true,
+						_ => return Err(format!("\
+Expected output format
+either '+'-separated 'ascii', 'png', and/or 'order'
+or sole 'eq' or 'recurrent'.
+Got: {}", out))
+					}
+				}
+			}
+		} else {
+			return Err("Please specify desired output (e.g., 'ascii') as the 3rd command line argument.".to_owned())
+		};
 		while actions_expected > 0 {
 			let arg = match args.next() {
 				Some(s) => s,
@@ -172,7 +208,7 @@ sandpile finite 60x50 ascii+png id out/id.png".to_owned())
 					Ok(n) => (Action::All(n), 0),
 					Err(_e) => return Err("In target 'all-N', N must be a 8-bit number.".to_owned()),
 				},
-	//			"_inverse" => Action::_Inverse,
+				"_inverse" => (Action::_Inverse, 1),
 				"add" => (Action::Add, 2),
 				"dup" => (Action::Dup, 0),
 				s => return Err(format!("Unknown target: {}", s))
@@ -194,6 +230,8 @@ sandpile finite 60x50 ascii+png id out/id.png".to_owned())
 			dimensions: (x, y),
 			out_ascii,
 			out_png: if out_png { Some(filename) } else { None },
+			eq,
+			order,
 			actions,
 		})
 	}
