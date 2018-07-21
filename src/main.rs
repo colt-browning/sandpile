@@ -109,10 +109,6 @@ enum Action {
 	Add,
 	Dup,
 //	_Inverse,
-/*	enum Top {
-		Order,
-		Eq,
-	},*/
 }
 
 impl Config {
@@ -124,7 +120,7 @@ impl Config {
 			_ => return Err("\
 Please specify grid type ('finite' or 'torus') as the 1st command line argument.
 Example of a correct call (with cargo, use 'cargo run --release' instead of 'sandpile'):
-sandpile finite 60x50 id ascii+png out/id.png".to_owned())
+sandpile finite 60x50 ascii+png id out/id.png".to_owned())
 		};
 		let (x, y) = match || -> Option<_> {
 			let s = match args.next() {
@@ -150,13 +146,20 @@ sandpile finite 60x50 id ascii+png out/id.png".to_owned())
 			Some(dim) => dim,
 			None => return Err("Please specify grid size (as '100' or '200x100') as the 2nd command line argument.".to_owned())
 		};
+		let (out_ascii, out_png) = match args.next() {
+			Some(ref s) if s == "ascii" => (true, false),
+			None => (true, false),
+			Some(ref s) if s == "png" => (false, true),
+			Some(ref s) if s == "ascii+png" => (true, true),
+			Some(s) => return Err(format!("Please specify output format. Expected 'ascii' (default), 'png', or 'ascii+png', got: {}", s))
+		};
 		let mut actions_expected = 1;
 		let mut actions = Vec::new();
 		while actions_expected > 0 {
 			let arg = match args.next() {
 				Some(s) => s,
 				None => return Err(if actions.is_empty() {
-					"Please specify target ('id', 'read', 'read_list', 'all-N', 'dup', or 'add') as the 3rd command line argument."
+					"Please specify target: 'id', 'read', 'read_list', 'all-N', 'dup', or 'add'."
 				} else {
 					"Target list terminated unexpectedly."
 				}.to_owned())
@@ -180,13 +183,6 @@ sandpile finite 60x50 id ascii+png out/id.png".to_owned())
 		if *actions.last().unwrap() == Action::Dup {
 			return Err("'dup' duplicates the next target, so at the point it occurs at least 2 targets should be expected, and at least 1 more should follow.".to_owned());
 		}
-		let (out_ascii, out_png) = match args.next() {
-			Some(ref s) if s == "ascii" => (true, false),
-			None => (true, false),
-			Some(ref s) if s == "png" => (false, true),
-			Some(ref s) if s == "ascii+png" => (true, true),
-			Some(s) => return Err(format!("Please specify output format after targets. Expected 'ascii' (default), 'png', or 'ascii+png', got: {}", s))
-		};
 		let filename = if out_png {
 			match args.next() {
 				Some(s) => s,

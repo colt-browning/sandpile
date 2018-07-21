@@ -2,11 +2,9 @@ Implementation of the [sandpile model](https://en.wikipedia.org/wiki/Abelian_san
 
 Example calls:
 
-`cargo run --release finite 60x50 id ascii+png out/id.png`
+`cargo run --release finite 60x50 ascii+png id out/id.png`
 
-`cargo run --release finite 40x40 add all-3 read_list ascii+png out/tropical.png`
-and then
-`2 6, 8 36, 12 13, 17 10.`
+`echo "2 6, 8 36, 12 13, 17 10." | cargo run --release finite 40x40 ascii+png add all-3 read_list out/tropical.png`
 
 The underlying graph is always a rectangular grid. Various boundary conditions are available:
 
