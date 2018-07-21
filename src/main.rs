@@ -65,6 +65,10 @@ fn main() {
 				}
 				stack.push(a)
 			},
+			Action::Dup => {
+				let a = stack.last().unwrap().clone();
+				stack.push(a);
+			},
 		}
 	}
 	let a = stack.pop().unwrap();
@@ -103,7 +107,12 @@ enum Action {
 	ReadList,
 	All(u8),
 	Add,
+	Dup,
 //	_Inverse,
+/*	enum Top {
+		Order,
+		Eq,
+	},*/
 }
 
 impl Config {
@@ -147,7 +156,7 @@ sandpile finite 60x50 id ascii+png out/id.png".to_owned())
 			let arg = match args.next() {
 				Some(s) => s,
 				None => return Err(if actions.is_empty() {
-					"Please specify target ('id', 'read', 'read_list', 'all-N', or 'add') as the 3rd command line argument."
+					"Please specify target ('id', 'read', 'read_list', 'all-N', 'dup', or 'add') as the 3rd command line argument."
 				} else {
 					"Target list terminated unexpectedly."
 				}.to_owned())
@@ -162,10 +171,14 @@ sandpile finite 60x50 id ascii+png out/id.png".to_owned())
 				},
 	//			"_inverse" => Action::_Inverse,
 				"add" => (Action::Add, 2),
+				"dup" => (Action::Dup, 0),
 				s => return Err(format!("Unknown target: {}", s))
 			};
 			actions.push(action);
 			actions_expected += incr - 1;
+		}
+		if *actions.last().unwrap() == Action::Dup {
+			return Err("'dup' duplicates the next target, so at the point it occurs at least 2 targets should be expected, and at least 1 more should follow.".to_owned());
 		}
 		let (out_ascii, out_png) = match args.next() {
 			Some(ref s) if s == "ascii" => (true, false),

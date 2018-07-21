@@ -251,11 +251,11 @@ impl Error for SandpileError {
 	fn description(&self) -> &str {
 		match *self {
 			SandpileError::EmptyGrid => "empty grid",
-			SandpileError::EmptyFirstRow(_) => "empty first row",
-			SandpileError::UnequalRowLengths(_, _, _, _) => "unequal row lengths",
-			SandpileError::UnequalTypes(_, _) => "unequal types",
-			SandpileError::UnequalDimensions(_, _, _, _) => "unequal dimensions",
-			SandpileError::UnknownSymbol(_) => "unknown symbol",
+			SandpileError::EmptyFirstRow(..) => "empty first row",
+			SandpileError::UnequalRowLengths(..) => "unequal row lengths",
+			SandpileError::UnequalTypes(..) => "unequal types",
+			SandpileError::UnequalDimensions(..) => "unequal dimensions",
+			SandpileError::UnknownSymbol(..) => "unknown symbol",
 		}
 	}
 	
