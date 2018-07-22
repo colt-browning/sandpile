@@ -57,9 +57,9 @@ fn main() {
 				}
 				stack.push(a)
 			},
-			Action::_Inverse => {
+			Action::Inverse => {
 				let a = stack.pop().unwrap();
-				let g = a._inverse();
+				let g = a.inverse();
 				stack.push(g);
 			}
 			Action::Add => {
@@ -123,7 +123,7 @@ enum Action {
 	All(u8),
 	Add,
 	Dup,
-	_Inverse,
+	Inverse,
 }
 
 impl Config {
@@ -195,7 +195,7 @@ Got: {}", out))
 			let arg = match args.next() {
 				Some(s) => s,
 				None => return Err(if actions.is_empty() {
-					"Please specify target: 'id', 'read', 'read_list', 'all-N', 'dup', or 'add'."
+					"Please specify target: 'id', 'read', 'read_list', 'all-N', 'inverse', 'dup', or 'add'."
 				} else {
 					"Target list terminated unexpectedly."
 				}.to_owned())
@@ -208,7 +208,7 @@ Got: {}", out))
 					Ok(n) => (Action::All(n), 0),
 					Err(_e) => return Err("In target 'all-N', N must be a 8-bit number.".to_owned()),
 				},
-				"_inverse" => (Action::_Inverse, 1),
+				"inverse" => (Action::Inverse, 1),
 				"add" => (Action::Add, 2),
 				"dup" => (Action::Dup, 0),
 				s => return Err(format!("Unknown target: {}", s))

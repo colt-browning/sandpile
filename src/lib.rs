@@ -185,12 +185,12 @@ impl GridSandpile {
 		count
 	}
 	
-	pub fn _inverse(&self) -> GridSandpile {
-		let mut sandpile = GridSandpile::from_grid(self.grid_type, vec![vec![6; self.grid[0].len()]; self.grid.len()]).unwrap(); // TODO: ?
+	pub fn inverse(&self) -> GridSandpile {
+		let mut sandpile = GridSandpile::from_grid(self.grid_type, vec![vec![6; self.grid[0].len()]; self.grid.len()]).unwrap();
 		sandpile.topple();
 		for y in 0..self.grid.len() {
 			for x in 0..self.grid[0].len() {
-				sandpile.grid[y][x] = 6 - sandpile.grid[y][x] - self.grid[y][x];
+				sandpile.grid[y][x] = 2 * (6 - sandpile.grid[y][x]) - self.grid[y][x];
 			}
 		}
 		if self.grid_type == GridType::Toroidal {
