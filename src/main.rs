@@ -80,8 +80,11 @@ fn main() {
 	if config.out_ascii {
 		print!("{}", a);
 	}
+	if config.topplings {
+		println!("Topplings: {}", a.last_topple());
+	}
 	if config.order {
-		println!("{}", a.order());
+		println!("Order: {}", a.order());
 	}
 	if let Some(mut filename) = config.out_png {
 		let g = a.into_grid();
@@ -107,6 +110,7 @@ struct Config {
 	out_png: Option<String>,
 	eq: bool,
 	order: bool,
+	topplings: bool,
 	actions: Vec<Action>,
 }
 
@@ -158,6 +162,7 @@ sandpile finite 60x50 ascii+png id out/id.png".to_owned())
 		};
 		let mut out_ascii = false;
 		let mut out_png = false;
+		let mut topplings = false;
 		let mut order = false;
 		let mut eq = false;
 		let mut actions = Vec::new();
@@ -174,10 +179,11 @@ sandpile finite 60x50 ascii+png id out/id.png".to_owned())
 					match out {
 						"ascii" => out_ascii = true,
 						"png" => out_png = true,
+						"topplings" => topplings = true,
 						"order" => order = true,
 						_ => return Err(format!("\
 Expected output format
-either '+'-separated 'ascii', 'png', and/or 'order'
+either '+'-separated 'ascii', 'png', 'topplings', and/or 'order'
 or sole 'eq' or 'recurrent'.
 Got: {}", out))
 					}
@@ -227,6 +233,7 @@ Got: {}", out))
 			out_png: if out_png { Some(filename) } else { None },
 			eq,
 			order,
+			topplings,
 			actions,
 		})
 	}
