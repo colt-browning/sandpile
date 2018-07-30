@@ -56,6 +56,7 @@ impl GridSandpile {
 		if grid_type == GridType::Toroidal {
 			sandpile.grid[0][0] = 0;
 		}
+		sandpile.topple();
 		Ok(sandpile)
 	}
 
@@ -81,7 +82,7 @@ impl GridSandpile {
 		GridSandpile::from_grid(grid_type, g)
 	}
 
-	pub fn add(&mut self, p: &GridSandpile) -> Result<u64, SandpileError> {
+	pub fn add(&mut self, p: &GridSandpile) -> Result<(), SandpileError> {
 		if p.grid_type != self.grid_type {
 			return Err(SandpileError::UnequalTypes(self.grid_type, p.grid_type));
 		}
@@ -94,7 +95,8 @@ impl GridSandpile {
 				self.grid[i][j] += p.grid[i][j];
 			}
 		}
-		Ok(self.topple())
+		self.topple();
+		Ok(())
 	}
 	
 	pub fn neutral(grid_type: GridType, (x, y): (usize, usize)) -> GridSandpile {
@@ -117,7 +119,7 @@ impl GridSandpile {
 		self.grid
 	}
 
-	pub fn topple(&mut self) -> u64 {
+	fn topple(&mut self) -> u64 {
 		let mut excessive = HashSet::new();
 		let mut ex2;
 		for i in 0..self.grid.len() {
@@ -202,8 +204,6 @@ impl GridSandpile {
 
 	pub fn order(&self) -> u64
 	{
-	// TODO?: учесть, что self может и не быть элементом группы, а только элементом моноида
-	// проверяется прибавлением к id
 		let mut a = self.clone();
 		a.add(self).unwrap();
 		let mut count = 1;

@@ -29,8 +29,7 @@ fn main() {
 				for _ in 0..y {
 					io::stdin().read_line(&mut g)?;
 				}
-				let mut a = GridSandpile::from_string(config.grid_type, config.dimensions, g)?;
-				a.topple();
+				let a = GridSandpile::from_string(config.grid_type, config.dimensions, g)?;
 				Ok(a)
 			}() {
 				Ok(x) => stack.push(x),
@@ -42,7 +41,6 @@ fn main() {
 			Action::ReadList => match read_list(x, y) {
 				Ok(grid) => {
 					let mut a = GridSandpile::from_grid(config.grid_type, grid).unwrap();
-					a.topple();
 					stack.push(a);
 				},
 				Err(e) => {
@@ -52,9 +50,6 @@ fn main() {
 			},
 			Action::All(n) => {
 				let mut a = GridSandpile::from_grid(config.grid_type, vec![vec![n; x]; y]).unwrap();
-				if n >= 4 {
-					a.topple();
-				}
 				stack.push(a)
 			},
 			Action::Inverse => {
