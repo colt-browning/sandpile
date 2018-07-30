@@ -14,11 +14,20 @@ pub enum GridType {
 	Toroidal,	// Toroidal rectangular grid with sink at the top-left node.
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct GridSandpile {
 	grid_type: GridType,
 	grid: Vec<Vec<u8>>,
+	last_topple: u64,
 }
+
+impl PartialEq for GridSandpile {
+	fn eq(&self, other: &GridSandpile) -> bool {
+		self.grid_type == other.grid_type && self.grid == other.grid
+	}
+}
+
+impl Eq for GridSandpile {}
 
 impl fmt::Display for GridSandpile {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -52,6 +61,7 @@ impl GridSandpile {
 		let mut sandpile = GridSandpile {
 			grid_type,
 			grid,
+			last_topple: 0,
 		};
 		if grid_type == GridType::Toroidal {
 			sandpile.grid[0][0] = 0;
@@ -184,7 +194,12 @@ impl GridSandpile {
 			}
 			excessive = ex2;
 		}
+		self.last_topple = count;
 		count
+	}
+	
+	pub fn last_topple(&self) -> u64 {
+		self.last_topple
 	}
 	
 	pub fn inverse(&self) -> GridSandpile {
