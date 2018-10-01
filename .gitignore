@@ -1,4 +1,4 @@
 /out
 /target
-/manual_backups
+/mback
 **/*.rs.bk

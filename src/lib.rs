@@ -32,14 +32,13 @@ impl Eq for GridSandpile {}
 impl fmt::Display for GridSandpile {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		let vis = [" ", ".", ":", "&", "#"];
-		let mut s = String::new();
 		for row in &self.grid {
 			for el in row {
-				s += vis[if *el < 4 {*el} else {4} as usize];
+				write!(f, "{}", vis[if *el < 4 {*el} else {4} as usize])?;
 			}
-			s += "\n";
+			writeln!(f)?;
 		}
-		write!(f, "{}", s)
+		Ok(())
 	}
 }
 
@@ -260,28 +259,13 @@ impl fmt::Display for SandpileError {
 	}
 }
 
-impl Error for SandpileError {
-	fn description(&self) -> &str {
-		match *self {
-			SandpileError::EmptyGrid => "empty grid",
-			SandpileError::EmptyFirstRow(..) => "empty first row",
-			SandpileError::UnequalRowLengths(..) => "unequal row lengths",
-			SandpileError::UnequalTypes(..) => "unequal types",
-			SandpileError::UnequalDimensions(..) => "unequal dimensions",
-			SandpileError::UnknownSymbol(..) => "unknown symbol",
-		}
-	}
-	
-	fn cause(&self) -> Option<&dyn Error> {
-		None
-	}
-}
+impl Error for SandpileError {}
 
 impl SandpileError {
 	pub fn into_grid(self) -> Option<Vec<Vec<u8>>> {
 		match self {
 			SandpileError::EmptyFirstRow(grid)
-			| SandpileError::UnequalRowLengths(grid, _, _, _) =>
+			| SandpileError::UnequalRowLengths(grid, ..) =>
 				Some(grid),
 			_ => None,
 		}
