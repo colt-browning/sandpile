@@ -119,7 +119,7 @@ enum Action {
 	Id,
 	Read,
 	ReadList,
-	All(u8),
+	All(sandpile::Cell),
 	Add,
 	Dup,
 	Inverse,
@@ -205,9 +205,9 @@ Got: {}", out))
 				"id" => (Action::Id, 0),
 				"read" => (Action::Read, 0),
 				"read_list" => (Action::ReadList, 0),
-				s if s.starts_with("all-") => match s[4..].parse::<u8>() {
+				s if s.starts_with("all-") => match s[4..].parse::<sandpile::Cell>() {
 					Ok(n) => (Action::All(n), 0),
-					Err(_e) => return Err("In target 'all-N', N must be a 8-bit number.".to_owned()),
+					Err(_e) => return Err("In target 'all-N', N must be a 32-bit number.".to_owned()),
 				},
 				"inverse" => (Action::Inverse, 1),
 				"add" => (Action::Add, 2),
@@ -239,7 +239,7 @@ Got: {}", out))
 	}
 }
 
-fn read_list(x: usize, y: usize) -> Result<Vec<Vec<u8>>, Box<dyn Error>> {
+fn read_list(x: usize, y: usize) -> Result<sandpile::Grid, Box<dyn Error>> {
 	let mut g = String::new();
 	while !g.ends_with(".") {
 		io::stdin().read_line(&mut g)?;

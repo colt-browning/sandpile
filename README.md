@@ -2,19 +2,19 @@ Implementation of the [sandpile model](https://en.wikipedia.org/wiki/Abelian_san
 
 Example calls:
 
-* Identity element:
+* Identity element:\
 `cargo run --release finite 60x50 ascii+png id out/id.png`
-* [Tropical curves](https://en.wikipedia.org/wiki/Tropical_geometry) (see [Geneva Tropical Wiki / tropicalsand](https://www.unige.ch/math/tggroup/doku.php?id=tropicalsand)):
+* [Tropical curves](https://en.wikipedia.org/wiki/Tropical_geometry) (see [Geneva Tropical Wiki / tropicalsand](https://www.unige.ch/math/tggroup/doku.php?id=tropicalsand)):\
 `echo "2 6, 8 36, 12 13, 17 10." | cargo run --release finite 40 ascii+png add all-3 read_list out/tropical.png`
-* [OEIS A256046](https://oeis.org/A256046) (see also [A256045](https://oeis.org/A256045)):
+* [OEIS A256046](https://oeis.org/A256046) (see also [A256045](https://oeis.org/A256045)):\
 `for ($n = 2; $n -lt 9; $n++) { cargo run --release finite $n order all-2 }` (PowerShell)
-or
+or\
 `for n in {2..8}; do cargo run --release finite ${n} order all-2; done` (bash)
-* [OEIS A249872](https://oeis.org/A249872) (see also [A293452](https://oeis.org/A293452)):
+* [OEIS A249872](https://oeis.org/A249872) (see also [A293452](https://oeis.org/A293452)):\
 `for ($n = 1; $n -lt 10; $n++) { cargo run --release torus $n topplings all-4 }`
-or
+or\
 `for n in {1..9}; do cargo run --release torus ${n} topplings all-4; done`
-* Verify that `inverse` indeed gives inverse:
+* Verify that `inverse` indeed gives inverse:\
 `cargo run --release finite 10 eq id add inverse dup all-3`
 
 The executable file takes the following command line arguments (see details below):
@@ -22,8 +22,8 @@ The executable file takes the following command line arguments (see details belo
 * type of the underlying grid;
 * its size;
 * the sequence of commands in the normal Polish notation which operate the stack of sandpiles:
- * the first of these arguments (executed last) determines the output of the program, which may be an ascii image, a number, a boolean value (these three go to stdout as text), a png image, or some combination of these output options;
- * other commands do various jobs, and they may pop sandpiles from the stack and push sandpiles to the stack;
+  * the first of these arguments (executed last) determines the output of the program, which may be an ascii image, a number, a boolean value (these three go to stdout as text), a png image, or some combination of these output options;
+  * other commands do various jobs, and they may pop sandpiles from the stack and push sandpiles to the stack;
 * if the `png` output option has been specified, the last argument is the output file name.
 
 The underlying graph is always a rectangular grid. Various boundary conditions are available:

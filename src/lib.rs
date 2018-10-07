@@ -8,6 +8,9 @@ use std::{
 	error::Error,
 };
 
+pub type Cell = u32;
+pub type Grid = Vec<Vec<Cell>>;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GridType {
 	Finite,		// Finite rectangular grid with sink all around the grid.
@@ -17,7 +20,7 @@ pub enum GridType {
 #[derive(Debug, Clone)]
 pub struct GridSandpile {
 	grid_type: GridType,
-	grid: Vec<Vec<u8>>,
+	grid: Grid,
 	last_topple: u64,
 }
 
@@ -43,7 +46,7 @@ impl fmt::Display for GridSandpile {
 }
 
 impl GridSandpile {
-	pub fn from_grid(grid_type: GridType, grid: Vec<Vec<u8>>) -> Result<GridSandpile, SandpileError> {
+	pub fn from_grid(grid_type: GridType, grid: Grid) -> Result<GridSandpile, SandpileError> {
 		if grid.is_empty() {
 			return Err(SandpileError::EmptyGrid);
 		}
@@ -88,7 +91,11 @@ impl GridSandpile {
 		if y == 0 || x == 0 || g.len() == 0 {
 			return Err(SandpileError::EmptyGrid);
 		}
-		GridSandpile::from_grid(grid_type, g)
+		let s = GridSandpile::from_grid(grid_type, g)?;
+		if s.grid.len() != y || s.grid[0].len() != x {
+			return Err(SandpileError::UnequalDimensions(x, y, s.grid.len(), s.grid[0].len()))
+		}
+		Ok(s)
 	}
 
 	pub fn add(&mut self, p: &GridSandpile) -> Result<(), SandpileError> {
@@ -123,7 +130,7 @@ impl GridSandpile {
 		sandpile
 	}
 
-	pub fn into_grid(self) -> Vec<Vec<u8>> {
+	pub fn into_grid(self) -> Grid {
 		self.grid
 	}
 
@@ -234,8 +241,8 @@ impl GridSandpile {
 #[derive(Debug)]
 pub enum SandpileError {
 	EmptyGrid,
-	EmptyFirstRow(Vec<Vec<u8>>),
-	UnequalRowLengths(Vec<Vec<u8>>, usize, usize, usize),
+	EmptyFirstRow(Grid),
+	UnequalRowLengths(Grid, usize, usize, usize),
 	UnequalTypes(GridType, GridType),
 	UnequalDimensions(usize, usize, usize, usize),
 	UnknownSymbol(char),
@@ -245,16 +252,16 @@ impl fmt::Display for SandpileError {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		match *self {
 			SandpileError::EmptyGrid => write!(f, "Attempt to build a sandpile upon zero-size grid."),
-			SandpileError::EmptyFirstRow(_) => write!(f, "Grid has empty initial row."),
+			SandpileError::EmptyFirstRow(_) => write!(f, "Sandpile grid has empty initial row."),
 			SandpileError::UnequalRowLengths(_, expected, n, got) =>
-				write!(f, "Grid (vector of vectors) does not represent rectangular matrix: initial row has length {}, row {} has length {}.",
+				write!(f, "Sandpile grid does not represent rectangular matrix: initial row has length {}, row {} has length {}.",
 					expected, n, got),
 			SandpileError::UnequalTypes(expected, got) =>
 				write!(f, "Adding sandpiles on grids of different types: {:?} and {:?}.", expected, got),
 			SandpileError::UnequalDimensions(self_x, self_y, other_x, other_y) =>
-				write!(f, "Adding sandpiles on grids of different sizes: {}x{} and {}x{}.",
+				write!(f, "Incorrect dimensions of sandpile grids: expected {}x{}, got {}x{}.",
 					self_x, self_y, other_x, other_y),
-			SandpileError::UnknownSymbol(ch) => write!(f, "Unknown symbol: {}", ch),
+			SandpileError::UnknownSymbol(ch) => write!(f, "Unknown symbol in the text representation of a sandpile: {}", ch),
 		}
 	}
 }
@@ -262,7 +269,7 @@ impl fmt::Display for SandpileError {
 impl Error for SandpileError {}
 
 impl SandpileError {
-	pub fn into_grid(self) -> Option<Vec<Vec<u8>>> {
+	pub fn into_grid(self) -> Option<Grid> {
 		match self {
 			SandpileError::EmptyFirstRow(grid)
 			| SandpileError::UnequalRowLengths(grid, ..) =>
@@ -272,7 +279,7 @@ impl SandpileError {
 	}
 }
 
-pub fn png(grid: &Vec<Vec<u8>>, fname: &str) -> Result<(), io::Error> {
+pub fn png(grid: &Grid, fname: &str) -> io::Result<()> {
 	let colors = [
 		[0, 0, 0, 255],
 		[64, 128, 0, 255],
@@ -306,5 +313,49 @@ mod tests {
 		let s = GridSandpile::neutral(GridType::Toroidal, (3, 2));
 		let g = s.into_grid();
 		assert_eq!(g, vec![vec![0, 3, 3], vec![2, 1, 1]]);
+	}
+	
+	#[test]
+	fn from_string() {
+		let st = "&. \n:.:\n";
+		let s = GridSandpile::from_string(GridType::Finite, (3, 2), String::from(st)).unwrap();
+		let g = s.into_grid();
+		assert_eq!(g, vec![vec![3, 1, 0], vec![2, 1, 2]]);
+		let s = GridSandpile::from_string(GridType::Toroidal, (3, 2), String::from(st)).unwrap();
+		let g = s.into_grid();
+		assert_eq!(g, vec![vec![0, 1, 0], vec![2, 1, 2]]);
+	}
+	
+	#[test]
+	fn display() {
+		let g = vec![vec![3, 1, 0], vec![2, 1, 2]];
+		let s = GridSandpile::from_grid(GridType::Finite, g.clone()).unwrap();
+		assert_eq!(format!("{}", s), String::from("&. \n:.:\n"));
+		let s = GridSandpile::from_grid(GridType::Toroidal, g).unwrap();
+		assert_eq!(format!("{}", s), String::from(" . \n:.:\n"));
+	}
+	
+	#[test]
+	fn add() {
+		let mut s1 = GridSandpile::from_grid(GridType::Finite, vec![vec![2, 1, 2], vec![3, 3, 1], vec![2, 3, 1]]).unwrap();
+		let r = s1.clone();
+		let s2 = GridSandpile::from_grid(GridType::Finite, vec![vec![2, 1, 2], vec![1, 0, 1], vec![2, 1, 2]]).unwrap();
+		s1.add(&s2).unwrap();
+		assert_eq!(s1, r);
+		assert_eq!(r.last_topple(), 0);
+		assert_eq!(s1.last_topple(), 9);
+	}
+	
+	#[test]
+	fn order() {
+		let s = GridSandpile::from_grid(GridType::Finite, vec![vec![3, 3, 3], vec![3, 3, 3]]).unwrap();
+		assert_eq!(s.order(), 7);
+	}
+	
+	#[test]
+	fn inverse() {
+		let s = GridSandpile::from_grid(GridType::Finite, vec![vec![3, 3, 3], vec![3, 3, 3]]).unwrap();
+		let i = GridSandpile::from_grid(GridType::Finite, vec![vec![2, 3, 2], vec![2, 3, 2]]).unwrap();
+		assert_eq!(s.inverse(), i);
 	}
 }
