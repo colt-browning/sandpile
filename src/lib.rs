@@ -1,5 +1,3 @@
-extern crate repng;
-
 use std::{
 	collections::HashSet,
 	io,
@@ -118,8 +116,8 @@ impl GridSandpile {
 	pub fn neutral(grid_type: GridType, (x, y): (usize, usize)) -> GridSandpile {
 	// Proposition 6.36 of http://people.reed.edu/~davidp/divisors_and_sandpiles/
 		let mut sandpile = GridSandpile::from_grid(grid_type, vec![vec![6; x]; y]).unwrap();
-		for mut row in &mut sandpile.grid {
-			for mut el in row {
+		for row in &mut sandpile.grid {
+			for el in row {
 				*el = 6 - *el;
 			}
 		}

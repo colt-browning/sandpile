@@ -1,5 +1,3 @@
-extern crate sandpile;
-
 use sandpile::{
 	GridType,
 	GridSandpile,
@@ -40,7 +38,7 @@ fn main() {
 			},
 			Action::ReadList => match read_list(x, y) {
 				Ok(grid) => {
-					let mut a = GridSandpile::from_grid(config.grid_type, grid).unwrap();
+					let a = GridSandpile::from_grid(config.grid_type, grid).unwrap();
 					stack.push(a);
 				},
 				Err(e) => {
@@ -49,7 +47,7 @@ fn main() {
 				}
 			},
 			Action::All(n) => {
-				let mut a = GridSandpile::from_grid(config.grid_type, vec![vec![n; x]; y]).unwrap();
+				let a = GridSandpile::from_grid(config.grid_type, vec![vec![n; x]; y]).unwrap();
 				stack.push(a)
 			},
 			Action::Inverse => {

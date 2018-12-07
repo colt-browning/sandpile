@@ -1,7 +1,8 @@
 [package]
 name = "sandpile"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Андрей Заболотский"]
+edition = "2018"
 
 [dependencies]
 repng="0.2.2"
