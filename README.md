@@ -32,7 +32,7 @@ The underlying graph is always a rectangular grid. Various boundary conditions a
 
 * `finite` grid with sink all around the grid;
 * `toroidal` grid with sink at the top-left node;
-* `infinite` auto-extending grid with no sink and no sandpile group (crashes when attempting to do group operations).
+* `infinite` auto-extending grid with no sink and no sandpile group (group operations are impossible).
 
 The size of an `N` by `M` grid is specified as `NxM`; simply `N` means `NxN`.
 
@@ -43,7 +43,7 @@ The following output options are available (all but the last one expect a single
 * `topplings`: how many topplings did the sandpile take to stabilize during the execution of the last command;
 * `order`: the order of the recurrent sandpile (runs forever on a non-recurrent sandpile);
 * `recurrent`: check whether the sandpile is recurrent;
-* `eq`: check whether two sandpiles are equal.
+* `eq`: check whether two sandpiles are equal (for infinite grids, the position of the origin is taken into account).
 
 The following commands are available:
 

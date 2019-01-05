@@ -45,7 +45,7 @@ impl fmt::Display for GridSandpile {
 }
 
 impl GridSandpile {
-	pub fn from_grid(grid_type: GridType, grid: Grid) -> Result<GridSandpile, SandpileError> {
+	pub fn from_grid(grid_type: GridType, grid: Grid) -> Result<Box<GridSandpile>, SandpileError> {
 		if grid.is_empty() {
 			return Err(SandpileError::EmptyGrid);
 		}
@@ -68,10 +68,10 @@ impl GridSandpile {
 			sandpile.grid[0][0] = 0;
 		}
 		sandpile.topple();
-		Ok(sandpile)
+		Ok(Box::new(sandpile))
 	}
 
-	pub fn from_string(grid_type: GridType, (x, y): (usize, usize), s: String) -> Result<GridSandpile, SandpileError> {
+	pub fn from_string(grid_type: GridType, (x, y): (usize, usize), s: String) -> Result<Box<GridSandpile>, SandpileError> {
 		let mut g = Vec::new();
 		for line in s.lines() {
 			let mut row = Vec::new();
@@ -90,12 +90,11 @@ impl GridSandpile {
 		if y == 0 || x == 0 || g.len() == 0 {
 			return Err(SandpileError::EmptyGrid);
 		}
-		let s = GridSandpile::from_grid(grid_type, g)?;
-		if s.grid.len() != y || s.grid[0].len() != x {
-			return Err(SandpileError::UnequalDimensions(x, y, s.grid.len(), s.grid[0].len()))
-			// TODO: исправить: в случае InfiniteGrid размер может измениться после обвалов
+		if g.len() != y || g[0].len() != x {
+			return Err(SandpileError::UnequalDimensions(x, y, g[0].len(), g.len()))
+			// actual error might be UnequalRowLengths, but it doesn't matter
 		}
-		Ok(s)
+		GridSandpile::from_grid(grid_type, g)
 	}
 
 	pub fn add(&mut self, p: &GridSandpile) -> Result<(), SandpileError> {
@@ -156,7 +155,7 @@ impl GridSandpile {
 		Ok(())
 	}
 	
-	pub fn neutral(grid_type: GridType, (x, y): (usize, usize)) -> GridSandpile {
+	pub fn neutral(grid_type: GridType, (x, y): (usize, usize)) -> Box<GridSandpile> {
 		if let GridType::Infinite(..) = grid_type {
 			panic!()
 		}
@@ -288,7 +287,7 @@ impl GridSandpile {
 		self.last_topple
 	}
 	
-	pub fn inverse(&self) -> GridSandpile {
+	pub fn inverse(&self) -> Box<GridSandpile> {
 		if let GridType::Infinite(..) = self.grid_type {
 			panic!()
 		}

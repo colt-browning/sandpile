@@ -22,7 +22,7 @@ fn main() {
 	while let Some(action) = config.actions.pop() {
 		match action {
 			Action::Id => stack.push(GridSandpile::neutral(config.grid_type, config.dimensions)),
-			Action::Read => match || -> Result<GridSandpile, Box<dyn Error>> {
+			Action::Read => match || -> Result<_, Box<dyn Error>> {
 				let mut g = String::new();
 				for _ in 0..y {
 					io::stdin().read_line(&mut g)?;
@@ -131,7 +131,7 @@ impl Config {
 			Some(ref s) if s == "infinite" => GridType::Infinite(0, 0),
 			Some(ref s) if s == "torus" || s == "toroidal"  => GridType::Toroidal,
 			_ => return Err("\
-Please specify grid type ('finite' or 'torus') as the 1st command line argument.
+Please specify grid type ('finite', 'torus', or 'infinite') as the 1st command line argument.
 Example of a correct call (with cargo, use 'cargo run --release' instead of 'sandpile'):
 sandpile finite 60x50 ascii+png id out/id.png".to_owned())
 		};
@@ -159,6 +159,7 @@ sandpile finite 60x50 ascii+png id out/id.png".to_owned())
 			Some(dim) => dim,
 			None => return Err("Please specify grid size (as '100' or '200x100') as the 2nd command line argument.".to_owned())
 		};
+		let mut group = false;
 		let mut out_ascii = false;
 		let mut out_png = false;
 		let mut topplings = false;
@@ -173,13 +174,14 @@ sandpile finite 60x50 ascii+png id out/id.png".to_owned())
 			} else if s == "recurrent" {
 				eq = true;
 				actions = vec![Action::Add, Action::Id, Action::Dup];
+				group = true;
 			} else {
 				for out in s.split("+") {
 					match out {
 						"ascii" => out_ascii = true,
 						"png" => out_png = true,
 						"topplings" => topplings = true,
-						"order" => order = true,
+						"order" => {group = true; order = true},
 						_ => return Err(format!("\
 Expected output format
 either '+'-separated 'ascii', 'png', 'topplings', and/or 'order'
@@ -201,14 +203,14 @@ Got: {}", out))
 				}.to_owned())
 			};
 			let (action, incr) = match arg.as_str() {
-				"id" => (Action::Id, 0),
+				"id" => {group = true; (Action::Id, 0)},
 				"read" => (Action::Read, 0),
 				"read_list" => (Action::ReadList, 0),
 				s if s.starts_with("all-") => match s[4..].parse::<sandpile::Cell>() {
 					Ok(n) => (Action::All(n), 0),
 					Err(_e) => return Err("In target 'all-N', N must be a 32-bit number.".to_owned()),
 				},
-				"inverse" => (Action::Inverse, 1),
+				"inverse" => {group = true; (Action::Inverse, 1)},
 				"add" => (Action::Add, 2),
 				"dup" => (Action::Dup, 0),
 				s => return Err(format!("Unknown target: {}", s))
@@ -225,6 +227,11 @@ Got: {}", out))
 				None => return Err("Please specify name for output png file as the final command line argument.".to_owned())
 			}
 		} else { String::new() };
+		if let GridType::Infinite(..) = grid_type {
+			if group {
+				return Err("For the infinite grid, outputs 'order' and 'recurrent' and targets 'id' and 'inverse' are impossible.".to_owned())
+			}
+		}
 		Ok(Config {
 			grid_type,
 			dimensions: (x, y),
