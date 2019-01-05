@@ -128,6 +128,7 @@ impl Config {
 		args.next();
 		let grid_type = match args.next() {
 			Some(ref s) if s == "finite" => GridType::Finite,
+			Some(ref s) if s == "infinite" => GridType::Infinite(0, 0),
 			Some(ref s) if s == "torus" || s == "toroidal"  => GridType::Toroidal,
 			_ => return Err("\
 Please specify grid type ('finite' or 'torus') as the 1st command line argument.

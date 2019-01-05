@@ -1,5 +1,4 @@
 use std::{
-	collections::HashSet,
 	io,
 	fs::File,
 	fmt,
@@ -13,6 +12,8 @@ pub type Grid = Vec<Vec<Cell>>;
 pub enum GridType {
 	Finite,		// Finite rectangular grid with sink all around the grid.
 	Toroidal,	// Toroidal rectangular grid with sink at the top-left node.
+	Infinite(usize, usize),	// Auto-extending grid with no sink.
+							// Origin at given position. No sandpile group.
 }
 
 #[derive(Debug, Clone)]
@@ -92,11 +93,53 @@ impl GridSandpile {
 		let s = GridSandpile::from_grid(grid_type, g)?;
 		if s.grid.len() != y || s.grid[0].len() != x {
 			return Err(SandpileError::UnequalDimensions(x, y, s.grid.len(), s.grid[0].len()))
+			// TODO: исправить: в случае InfiniteGrid размер может измениться после обвалов
 		}
 		Ok(s)
 	}
 
 	pub fn add(&mut self, p: &GridSandpile) -> Result<(), SandpileError> {
+		if let (GridType::Infinite(mut o1y, mut o1x), GridType::Infinite(o2y, o2x))
+		 = (self.grid_type, p.grid_type) {
+			if o2x > o1x {
+				for row in self.grid.iter_mut() {
+					let mut prow = vec![0; o2x-o1x];
+					prow.append(row);
+					*row = prow;
+				}
+				o1x = o2x;
+			}
+			if o2y > o1y {
+				let mut pgrid = vec![vec![0; self.grid.len()]; o2y-o1y];
+				pgrid.append(&mut self.grid);
+				self.grid = pgrid;
+				o1y = o2y;
+			}
+			self.grid_type = GridType::Infinite(o1y, o1x);
+			for i in (o1y-o2y)..self.grid.len() {
+				if i+o2y-o1y >= p.grid.len() {
+					break
+				}
+				for j in (o1x-o2x)..self.grid[0].len() {
+					if j+o2x-o1x >= p.grid[0].len() {
+						break
+					}
+					self.grid[i][j] += p.grid[i+o2y-o1y][j+o2x-o1x];
+				}
+				if self.grid[i].len() < p.grid[0].len()+o2x-o1x {
+					for el in &p.grid[i+o2y-o1y][self.grid[i].len()+o1x-o2x..] {
+						self.grid[i].push(*el);
+					}
+				}
+			}
+			if self.grid.len() < p.grid.len()+o2y-o1y {
+				for row in &p.grid[self.grid.len()+o1y-o2y..] {
+					self.grid.push(row.clone());
+				}
+			}
+			self.topple();
+			return Ok(())
+		}
 		if p.grid_type != self.grid_type {
 			return Err(SandpileError::UnequalTypes(self.grid_type, p.grid_type));
 		}
@@ -114,6 +157,9 @@ impl GridSandpile {
 	}
 	
 	pub fn neutral(grid_type: GridType, (x, y): (usize, usize)) -> GridSandpile {
+		if let GridType::Infinite(..) = grid_type {
+			panic!()
+		}
 	// Proposition 6.36 of http://people.reed.edu/~davidp/divisors_and_sandpiles/
 		let mut sandpile = GridSandpile::from_grid(grid_type, vec![vec![6; x]; y]).unwrap();
 		for row in &mut sandpile.grid {
@@ -133,20 +179,22 @@ impl GridSandpile {
 	}
 
 	fn topple(&mut self) -> u64 {
-		let mut excessive = HashSet::new();
+		let mut excessive = Vec::new();
 		let mut ex2;
 		for i in 0..self.grid.len() {
 			for j in 0..self.grid[i].len() {
 				if self.grid[i][j] >= 4 {
-					excessive.insert((i, j));
+					excessive.push((i, j));
 				}
 			}
 		}
 		let mut count = 0;
 		while !excessive.is_empty() {
-			ex2 = HashSet::new();
-			for c in excessive.drain() {
-				let (i, j) = c;
+			ex2 = Vec::new();
+			let (mut inc_i, mut inc_j) = (false, false);
+			for (i, j) in excessive {
+				let i = if inc_i { i+1 } else {i};
+				let j = if inc_j { j+1 } else {j};
 				let d = self.grid[i][j] / 4;
 				if d == 0 {
 					continue;
@@ -187,11 +235,46 @@ impl GridSandpile {
 							topple_to.push((i, j1));
 						}
 					},
+					GridType::Infinite(oy, ox) => {
+						let (mut i, mut j) = (i, j);
+						if j == 0 {
+							for row in self.grid.iter_mut() {
+								row.insert(0, 0);
+							}
+							for (_, tj) in ex2.iter_mut() {
+								*tj += 1;
+							}
+							j = 1;
+							inc_j = true;
+							self.grid_type = GridType::Infinite(oy, ox+1);
+						}
+						if j + 1 == self.grid[0].len() {
+							for row in self.grid.iter_mut() {
+								row.push(0);
+							}
+						}
+						if i == 0 {
+							self.grid.insert(0, vec![0; self.grid[0].len()]);
+							for (ti, _) in ex2.iter_mut() {
+								*ti += 1;
+							}
+							i = 1;
+							inc_i = true;
+							self.grid_type = GridType::Infinite(oy+1, ox);
+						}
+						if i + 1 == self.grid.len() {
+							self.grid.push(vec![0; self.grid[0].len()]);
+						}
+						topple_to.push((i-1, j));
+						topple_to.push((i+1, j));
+						topple_to.push((i, j-1));
+						topple_to.push((i, j+1));
+					},
 				};
 				for (ti, tj) in topple_to {
 					self.grid[ti][tj] += d;
 					if self.grid[ti][tj] >= 4 {
-						ex2.insert((ti, tj));
+						ex2.push((ti, tj));
 					}
 				}
 			}
@@ -206,6 +289,9 @@ impl GridSandpile {
 	}
 	
 	pub fn inverse(&self) -> GridSandpile {
+		if let GridType::Infinite(..) = self.grid_type {
+			panic!()
+		}
 		let mut sandpile = GridSandpile::from_grid(self.grid_type, vec![vec![6; self.grid[0].len()]; self.grid.len()]).unwrap();
 		for y in 0..self.grid.len() {
 			for x in 0..self.grid[0].len() {
@@ -221,6 +307,9 @@ impl GridSandpile {
 
 	pub fn order(&self) -> u64
 	{
+		if let GridType::Infinite(..) = self.grid_type {
+			panic!()
+		}
 		let mut a = self.clone();
 		a.add(self).unwrap();
 		let mut count = 1;
@@ -311,6 +400,19 @@ mod tests {
 		let s = GridSandpile::neutral(GridType::Toroidal, (3, 2));
 		let g = s.into_grid();
 		assert_eq!(g, vec![vec![0, 3, 3], vec![2, 1, 1]]);
+	}
+	
+	#[test]
+	fn infinite_delta00() {
+		let s = GridSandpile::from_grid(GridType::Infinite(0, 0), vec![vec![16]]).unwrap();
+		let s2 = GridSandpile::from_grid(GridType::Infinite(0, 0), vec![
+			vec![0, 0, 1, 0, 0],
+			vec![0, 2, 1, 2, 0],
+			vec![1, 1, 0, 1, 1],
+			vec![0, 2, 1, 2, 0],
+			vec![0, 0, 1, 0, 0],
+		]).unwrap();
+		assert_eq!(s.grid, s2.grid);
 	}
 	
 	#[test]

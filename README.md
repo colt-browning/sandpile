@@ -16,6 +16,8 @@ or\
 `for n in {1..9}; do cargo run --release torus ${n} topplings all-4; done`
 * Verify that `inverse` indeed gives inverse:\
 `cargo run --release finite 10 eq id add inverse dup all-3`
+* Drop many chips to the origin of the infinite grid:\
+`cargo run --release infinite 1 png all-100000 out/1e5.png`
 
 The executable file takes the following command line arguments (see details below):
 
@@ -29,7 +31,8 @@ The executable file takes the following command line arguments (see details belo
 The underlying graph is always a rectangular grid. Various boundary conditions are available:
 
 * `finite` grid with sink all around the grid;
-* `toroidal` grid with sink at the top-left node.
+* `toroidal` grid with sink at the top-left node;
+* `infinite` auto-extending grid with no sink and no sandpile group (crashes when attempting to do group operations).
 
 The size of an `N` by `M` grid is specified as `NxM`; simply `N` means `NxN`.
 
