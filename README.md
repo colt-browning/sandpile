@@ -34,6 +34,8 @@ The underlying graph is always a rectangular grid. Various boundary conditions a
 * `toroidal` grid with sink at the top-left node;
 * `infinite` auto-extending grid with no sink and no sandpile group (group operations are impossible).
 
+The default neighbourhood is the von Neumann neighbourhood (4 neighbours). To use Moore neighbourhood (8 neighbours), add `.moore` to the boundary condition, e. g., `finite.moore`.
+
 The size of an `N` by `M` grid is specified as `NxM`; simply `N` means `NxN`.
 
 The following output options are available (all but the last one expect a single sandpile in the stack, all but the last two can be combined with each other via `+`):

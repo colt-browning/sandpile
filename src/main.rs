@@ -1,5 +1,6 @@
 use sandpile::{
 	GridType,
+	Neighbourhood,
 	GridSandpile,
 	png,
 };
@@ -21,13 +22,13 @@ fn main() {
 	let mut stack = Vec::new();
 	while let Some(action) = config.actions.pop() {
 		match action {
-			Action::Id => stack.push(GridSandpile::neutral(config.grid_type, config.dimensions)),
+			Action::Id => stack.push(GridSandpile::neutral(config.grid_type, config.neighbourhood, config.dimensions)),
 			Action::Read => match || -> Result<_, Box<dyn Error>> {
 				let mut g = String::new();
 				for _ in 0..y {
 					io::stdin().read_line(&mut g)?;
 				}
-				let a = GridSandpile::from_string(config.grid_type, config.dimensions, g)?;
+				let a = GridSandpile::from_string(config.grid_type, config.neighbourhood, config.dimensions, g)?;
 				Ok(a)
 			}() {
 				Ok(x) => stack.push(x),
@@ -38,7 +39,7 @@ fn main() {
 			},
 			Action::ReadList => match read_list(x, y) {
 				Ok(grid) => {
-					let a = GridSandpile::from_grid(config.grid_type, grid).unwrap();
+					let a = GridSandpile::from_grid(config.grid_type, config.neighbourhood, grid).unwrap();
 					stack.push(a);
 				},
 				Err(e) => {
@@ -47,7 +48,7 @@ fn main() {
 				}
 			},
 			Action::All(n) => {
-				let a = GridSandpile::from_grid(config.grid_type, vec![vec![n; x]; y]).unwrap();
+				let a = GridSandpile::from_grid(config.grid_type, config.neighbourhood, vec![vec![n; x]; y]).unwrap();
 				stack.push(a)
 			},
 			Action::Inverse => {
@@ -103,6 +104,7 @@ fn main() {
 #[derive(Debug)]
 struct Config {
 	grid_type: GridType,
+	neighbourhood: Neighbourhood,
 	dimensions: (usize, usize),
 	out_ascii: bool,
 	out_png: Option<String>,
@@ -126,14 +128,26 @@ enum Action {
 impl Config {
 	fn new(args: &mut std::iter::Iterator<Item = String>) -> Result<Config, String> {
 		args.next();
-		let grid_type = match args.next() {
-			Some(ref s) if s == "finite" => GridType::Finite,
-			Some(ref s) if s == "infinite" => GridType::Infinite(0, 0),
-			Some(ref s) if s == "torus" || s == "toroidal"  => GridType::Toroidal,
-			_ => return Err("\
+		let grid_type_err = Err("\
 Please specify grid type ('finite', 'torus', or 'infinite') as the 1st command line argument.
+To use Moore neighbourhood (8 neighbours), type 'finite.moore' etc.
 Example of a correct call (with cargo, use 'cargo run --release' instead of 'sandpile'):
-sandpile finite 60x50 ascii+png id out/id.png".to_owned())
+sandpile finite 60x50 ascii+png id out/id.png".to_owned());
+		let grid_type = match args.next() {
+			Some(s) => s,
+			None => return grid_type_err
+		};
+		let grid_type: Vec<_> = grid_type.split('.').collect();
+		let (grid_type, neighbourhood) = match grid_type.len() {
+			1 => (grid_type[0], Neighbourhood::VonNeumann),
+			2 => (grid_type[0], if grid_type[1] == "moore" {Neighbourhood::Moore} else {Neighbourhood::VonNeumann}),
+			_ => return grid_type_err
+		};
+		let grid_type = match grid_type {
+			"finite" => GridType::Finite,
+			"infinite" => GridType::Infinite(0, 0),
+			"torus" | "toroidal"  => GridType::Toroidal,
+			_ => return grid_type_err
 		};
 		let (x, y) = match || -> Option<_> {
 			let s = match args.next() {
@@ -234,6 +248,7 @@ Got: {}", out))
 		}
 		Ok(Config {
 			grid_type,
+			neighbourhood,
 			dimensions: (x, y),
 			out_ascii,
 			out_png: if out_png { Some(filename) } else { None },

@@ -16,9 +16,25 @@ pub enum GridType {
 							// Origin at given position. No sandpile group.
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Neighbourhood {
+	VonNeumann,
+	Moore,
+}
+
+impl Neighbourhood {
+	fn neighbours(&self) -> Cell {
+		match *self {
+			Neighbourhood::VonNeumann => 4,
+			Neighbourhood::Moore => 8,
+		}
+	}
+}
+
 #[derive(Debug, Clone)]
 pub struct GridSandpile {
 	grid_type: GridType,
+	neighbourhood: Neighbourhood,
 	grid: Grid,
 	last_topple: u64,
 }
@@ -33,10 +49,10 @@ impl Eq for GridSandpile {}
 
 impl fmt::Display for GridSandpile {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		let vis = [" ", ".", ":", "&", "#"];
+		let vis = [" ", ".", ":", "&", "#", "5", "6", "7", "8"];
 		for row in &self.grid {
 			for el in row {
-				write!(f, "{}", vis[if *el < 4 {*el} else {4} as usize])?;
+				write!(f, "{}", vis[if *el < 8 {*el} else {8} as usize])?;
 			}
 			writeln!(f)?;
 		}
@@ -45,7 +61,7 @@ impl fmt::Display for GridSandpile {
 }
 
 impl GridSandpile {
-	pub fn from_grid(grid_type: GridType, grid: Grid) -> Result<Box<GridSandpile>, SandpileError> {
+	pub fn from_grid(grid_type: GridType, neighbourhood: Neighbourhood, grid: Grid) -> Result<Box<GridSandpile>, SandpileError> {
 		if grid.is_empty() {
 			return Err(SandpileError::EmptyGrid);
 		}
@@ -61,6 +77,7 @@ impl GridSandpile {
 		}
 		let mut sandpile = GridSandpile {
 			grid_type,
+			neighbourhood,
 			grid,
 			last_topple: 0,
 		};
@@ -71,7 +88,7 @@ impl GridSandpile {
 		Ok(Box::new(sandpile))
 	}
 
-	pub fn from_string(grid_type: GridType, (x, y): (usize, usize), s: String) -> Result<Box<GridSandpile>, SandpileError> {
+	pub fn from_string(grid_type: GridType, neighbourhood: Neighbourhood, (x, y): (usize, usize), s: String) -> Result<Box<GridSandpile>, SandpileError> {
 		let mut g = Vec::new();
 		for line in s.lines() {
 			let mut row = Vec::new();
@@ -82,6 +99,10 @@ impl GridSandpile {
 					':' => 2,
 					'&' => 3,
 					'#' => 4,
+					'5' => 5,
+					'6' => 6,
+					'7' => 7,
+					'8' => 8,
 					_ => return Err(SandpileError::UnknownSymbol(ch))
 				});
 			}
@@ -94,7 +115,7 @@ impl GridSandpile {
 			return Err(SandpileError::UnequalDimensions(x, y, g[0].len(), g.len()))
 			// actual error might be UnequalRowLengths, but it doesn't matter
 		}
-		GridSandpile::from_grid(grid_type, g)
+		GridSandpile::from_grid(grid_type, neighbourhood, g)
 	}
 
 	pub fn add(&mut self, p: &GridSandpile) -> Result<(), SandpileError> {
@@ -155,15 +176,16 @@ impl GridSandpile {
 		Ok(())
 	}
 	
-	pub fn neutral(grid_type: GridType, (x, y): (usize, usize)) -> Box<GridSandpile> {
+	pub fn neutral(grid_type: GridType, neighbourhood: Neighbourhood, (x, y): (usize, usize)) -> Box<GridSandpile> {
 		if let GridType::Infinite(..) = grid_type {
 			panic!()
 		}
 	// Proposition 6.36 of http://people.reed.edu/~davidp/divisors_and_sandpiles/
-		let mut sandpile = GridSandpile::from_grid(grid_type, vec![vec![6; x]; y]).unwrap();
+		let t = 2 * (neighbourhood.neighbours() - 1);
+		let mut sandpile = GridSandpile::from_grid(grid_type, neighbourhood, vec![vec![t; x]; y]).unwrap();
 		for row in &mut sandpile.grid {
 			for el in row {
-				*el = 6 - *el;
+				*el = t - *el;
 			}
 		}
 		if grid_type == GridType::Toroidal {
@@ -182,7 +204,7 @@ impl GridSandpile {
 		let mut ex2;
 		for i in 0..self.grid.len() {
 			for j in 0..self.grid[i].len() {
-				if self.grid[i][j] >= 4 {
+				if self.grid[i][j] >= self.neighbourhood.neighbours() {
 					excessive.push((i, j));
 				}
 			}
@@ -194,11 +216,11 @@ impl GridSandpile {
 			for (i, j) in excessive {
 				let i = if inc_i { i+1 } else {i};
 				let j = if inc_j { j+1 } else {j};
-				let d = self.grid[i][j] / 4;
+				let d = self.grid[i][j] / self.neighbourhood.neighbours();
 				if d == 0 {
 					continue;
 				}
-				self.grid[i][j] %= 4;
+				self.grid[i][j] %= self.neighbourhood.neighbours();
 				count += d as u64;
 				let mut topple_to = Vec::new();
 				match self.grid_type {
@@ -215,23 +237,51 @@ impl GridSandpile {
 						if j < self.grid[i].len()-1 {
 							topple_to.push((i, j+1));
 						}
+						if self.neighbourhood == Neighbourhood::Moore {
+							if i > 0 && j > 0 {
+								topple_to.push((i-1, j-1));
+							}
+							if i > 0 && j < self.grid[i].len()-1 {
+								topple_to.push((i-1, j+1));
+							}
+							if i < self.grid.len()-1 && j > 0 {
+								topple_to.push((i+1, j-1));
+							}
+							if i < self.grid.len()-1 && j < self.grid[i].len()-1 {
+								topple_to.push((i+1, j+1));
+							}
+						}
 					},
 					GridType::Toroidal => {
-						let i1 = if i > 0 {i-1} else {self.grid.len()-1};
-						if !(i1 == 0 && j == 0) {
-							topple_to.push((i1, j));
+						let im1 = if i > 0 {i-1} else {self.grid.len()-1};
+						if !(im1 == 0 && j == 0) {
+							topple_to.push((im1, j));
 						}
-						let j1 = if j > 0 {j-1} else {self.grid[0].len()-1};
-						if !(i == 0 && j1 == 0) {
-							topple_to.push((i, j1));
+						let jm1 = if j > 0 {j-1} else {self.grid[0].len()-1};
+						if !(i == 0 && jm1 == 0) {
+							topple_to.push((i, jm1));
 						}
-						let i1 = if i < self.grid.len()-1 {i+1} else {0};
-						if !(i1 == 0 && j == 0) {
-							topple_to.push((i1, j));
+						let ip1 = if i < self.grid.len()-1 {i+1} else {0};
+						if !(ip1 == 0 && j == 0) {
+							topple_to.push((ip1, j));
 						}
-						let j1 = if j < self.grid[i].len()-1 {j+1} else {0};
-						if !(i == 0 && j1 == 0) {
-							topple_to.push((i, j1));
+						let jp1 = if j < self.grid[i].len()-1 {j+1} else {0};
+						if !(i == 0 && jp1 == 0) {
+							topple_to.push((i, jp1));
+						}
+						if self.neighbourhood == Neighbourhood::Moore {
+							if !(im1 == 0 && jm1 == 0) {
+								topple_to.push((im1, jm1));
+							}
+							if !(im1 == 0 && jp1 == 0) {
+								topple_to.push((im1, jp1));
+							}
+							if !(ip1 == 0 && jm1 == 0) {
+								topple_to.push((ip1, jm1));
+							}
+							if !(ip1 == 0 && jp1 == 0) {
+								topple_to.push((ip1, jp1));
+							}
 						}
 					},
 					GridType::Infinite(oy, ox) => {
@@ -268,11 +318,17 @@ impl GridSandpile {
 						topple_to.push((i+1, j));
 						topple_to.push((i, j-1));
 						topple_to.push((i, j+1));
+						if self.neighbourhood == Neighbourhood::Moore {
+							topple_to.push((i-1, j-1));
+							topple_to.push((i+1, j-1));
+							topple_to.push((i-1, j+1));
+							topple_to.push((i+1, j+1));
+						}
 					},
 				};
 				for (ti, tj) in topple_to {
 					self.grid[ti][tj] += d;
-					if self.grid[ti][tj] >= 4 {
+					if self.grid[ti][tj] >= self.neighbourhood.neighbours() {
 						ex2.push((ti, tj));
 					}
 				}
@@ -291,10 +347,11 @@ impl GridSandpile {
 		if let GridType::Infinite(..) = self.grid_type {
 			panic!()
 		}
-		let mut sandpile = GridSandpile::from_grid(self.grid_type, vec![vec![6; self.grid[0].len()]; self.grid.len()]).unwrap();
+		let t = 2 * (self.neighbourhood.neighbours() - 1);
+		let mut sandpile = GridSandpile::from_grid(self.grid_type, self.neighbourhood, vec![vec![t; self.grid[0].len()]; self.grid.len()]).unwrap();
 		for y in 0..self.grid.len() {
 			for x in 0..self.grid[0].len() {
-				sandpile.grid[y][x] = 2 * (6 - sandpile.grid[y][x]) - self.grid[y][x];
+				sandpile.grid[y][x] = 2 * (t - sandpile.grid[y][x]) - self.grid[y][x];
 			}
 		}
 		if self.grid_type == GridType::Toroidal {
@@ -371,6 +428,10 @@ pub fn png(grid: &Grid, fname: &str) -> io::Result<()> {
 		[64, 128, 0, 255],
 		[118, 8, 170, 255],
 		[255, 214, 0, 255],
+		[255, 0, 0, 255],
+		[100, 100, 100, 255],
+		[0, 0, 255, 255],
+		[255, 255, 255, 255],
 	];
 	let mut pixels = vec![0; grid.len() * grid[0].len() * 4];
 	let mut p = 0;
@@ -389,22 +450,22 @@ mod tests {
 
 	#[test]
 	fn id_finite() {
-		let s = GridSandpile::neutral(GridType::Finite, (3, 2));
+		let s = GridSandpile::neutral(GridType::Finite, Neighbourhood::VonNeumann, (3, 2));
 		let g = s.into_grid();
 		assert_eq!(g, vec![vec![2, 1, 2], vec![2, 1, 2]]);
 	}
 	
 	#[test]
 	fn id_torus() {
-		let s = GridSandpile::neutral(GridType::Toroidal, (3, 2));
+		let s = GridSandpile::neutral(GridType::Toroidal, Neighbourhood::VonNeumann, (3, 2));
 		let g = s.into_grid();
 		assert_eq!(g, vec![vec![0, 3, 3], vec![2, 1, 1]]);
 	}
 	
 	#[test]
 	fn infinite_delta00() {
-		let s = GridSandpile::from_grid(GridType::Infinite(0, 0), vec![vec![16]]).unwrap();
-		let s2 = GridSandpile::from_grid(GridType::Infinite(0, 0), vec![
+		let s = GridSandpile::from_grid(GridType::Infinite(0, 0), Neighbourhood::VonNeumann, vec![vec![16]]).unwrap();
+		let s2 = GridSandpile::from_grid(GridType::Infinite(0, 0), Neighbourhood::VonNeumann, vec![
 			vec![0, 0, 1, 0, 0],
 			vec![0, 2, 1, 2, 0],
 			vec![1, 1, 0, 1, 1],
@@ -417,10 +478,10 @@ mod tests {
 	#[test]
 	fn from_string() {
 		let st = "&. \n:.:\n";
-		let s = GridSandpile::from_string(GridType::Finite, (3, 2), String::from(st)).unwrap();
+		let s = GridSandpile::from_string(GridType::Finite, Neighbourhood::VonNeumann, (3, 2), String::from(st)).unwrap();
 		let g = s.into_grid();
 		assert_eq!(g, vec![vec![3, 1, 0], vec![2, 1, 2]]);
-		let s = GridSandpile::from_string(GridType::Toroidal, (3, 2), String::from(st)).unwrap();
+		let s = GridSandpile::from_string(GridType::Toroidal, Neighbourhood::VonNeumann, (3, 2), String::from(st)).unwrap();
 		let g = s.into_grid();
 		assert_eq!(g, vec![vec![0, 1, 0], vec![2, 1, 2]]);
 	}
@@ -428,17 +489,17 @@ mod tests {
 	#[test]
 	fn display() {
 		let g = vec![vec![3, 1, 0], vec![2, 1, 2]];
-		let s = GridSandpile::from_grid(GridType::Finite, g.clone()).unwrap();
+		let s = GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, g.clone()).unwrap();
 		assert_eq!(format!("{}", s), String::from("&. \n:.:\n"));
-		let s = GridSandpile::from_grid(GridType::Toroidal, g).unwrap();
+		let s = GridSandpile::from_grid(GridType::Toroidal, Neighbourhood::VonNeumann, g).unwrap();
 		assert_eq!(format!("{}", s), String::from(" . \n:.:\n"));
 	}
 	
 	#[test]
 	fn add() {
-		let mut s1 = GridSandpile::from_grid(GridType::Finite, vec![vec![2, 1, 2], vec![3, 3, 1], vec![2, 3, 1]]).unwrap();
+		let mut s1 = GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, vec![vec![2, 1, 2], vec![3, 3, 1], vec![2, 3, 1]]).unwrap();
 		let r = s1.clone();
-		let s2 = GridSandpile::from_grid(GridType::Finite, vec![vec![2, 1, 2], vec![1, 0, 1], vec![2, 1, 2]]).unwrap();
+		let s2 = GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, vec![vec![2, 1, 2], vec![1, 0, 1], vec![2, 1, 2]]).unwrap();
 		s1.add(&s2).unwrap();
 		assert_eq!(s1, r);
 		assert_eq!(r.last_topple(), 0);
@@ -447,14 +508,22 @@ mod tests {
 	
 	#[test]
 	fn order() {
-		let s = GridSandpile::from_grid(GridType::Finite, vec![vec![3, 3, 3], vec![3, 3, 3]]).unwrap();
+		let s = GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, vec![vec![3, 3, 3], vec![3, 3, 3]]).unwrap();
 		assert_eq!(s.order(), 7);
 	}
 	
 	#[test]
 	fn inverse() {
-		let s = GridSandpile::from_grid(GridType::Finite, vec![vec![3, 3, 3], vec![3, 3, 3]]).unwrap();
-		let i = GridSandpile::from_grid(GridType::Finite, vec![vec![2, 3, 2], vec![2, 3, 2]]).unwrap();
+		let s = GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, vec![vec![3, 3, 3], vec![3, 3, 3]]).unwrap();
+		let i = GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, vec![vec![2, 3, 2], vec![2, 3, 2]]).unwrap();
 		assert_eq!(s.inverse(), i);
+	}
+	
+	#[test]
+	fn moore() {
+		assert_eq!(
+			GridSandpile::from_grid(GridType::Finite, Neighbourhood::Moore, vec![vec![0, 0, 0], vec![0, 9, 0], vec![0, 0, 0]]).unwrap(),
+			GridSandpile::from_grid(GridType::Finite, Neighbourhood::Moore, vec![vec![1, 1, 1], vec![1, 1, 1], vec![1, 1, 1]]).unwrap()
+		);
 	}
 }
