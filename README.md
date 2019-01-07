@@ -42,6 +42,7 @@ The following output options are available (all but the last one expect a single
 
 * `ascii`: write plaintext image of the sandpile to standard output;
 * `png`: save png image of the sandpile to a file specified by the final command line argument;
+* `time`: how much time did the program execution take;
 * `topplings`: how many topplings did the sandpile take to stabilize during the execution of the last command;
 * `order`: the order of the recurrent sandpile (runs forever on a non-recurrent sandpile);
 * `recurrent`: check whether the sandpile is recurrent;

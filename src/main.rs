@@ -7,19 +7,20 @@ use sandpile::{
 
 use std::{
 	io,
-	error::Error
+	error::Error,
 };
 
 fn main() {
 	let mut config = match Config::new(&mut std::env::args()) {
 		Ok(config) => config,
 		Err(e) => {
-			println!("{}", e);
+			eprintln!("{}", e);
 			return
 		}
 	};
 	let (x, y) = config.dimensions;
 	let mut stack = Vec::new();
+	let time = std::time::SystemTime::now();
 	while let Some(action) = config.actions.pop() {
 		match action {
 			Action::Id => stack.push(GridSandpile::neutral(config.grid_type, config.neighbourhood, config.dimensions)),
@@ -33,7 +34,7 @@ fn main() {
 			}() {
 				Ok(x) => stack.push(x),
 				Err(e) => {
-					println!("{}", e);
+					eprintln!("{}", e);
 					return
 				}
 			},
@@ -43,7 +44,7 @@ fn main() {
 					stack.push(a);
 				},
 				Err(e) => {
-					println!("{}", e);
+					eprintln!("{}", e);
 					return
 				}
 			},
@@ -59,7 +60,7 @@ fn main() {
 			Action::Add => {
 				let mut a = stack.pop().unwrap();
 				if let Err(e) = a.add(&stack.pop().unwrap()) {
-					println!("{}", e);
+					eprintln!("{}", e);
 					return
 				}
 				stack.push(a)
@@ -76,24 +77,30 @@ fn main() {
 		println!("{}", a == a2);
 		return
 	}
-	if config.out_ascii {
-		print!("{}", a);
-	}
 	if config.topplings {
 		println!("Topplings: {}", a.last_topple());
 	}
 	if config.order {
 		println!("Order: {}", a.order());
 	}
+	if config.time {
+		match time.elapsed() {
+			Ok(t) => println!("Total time taken: {}.{} s", t.as_secs(), t.subsec_millis()),
+			Err(e) => eprintln!("{}", e),
+		}
+	}
+	if config.out_ascii {
+		print!("{}", a);
+	}
 	if let Some(mut filename) = config.out_png {
 		let g = a.into_grid();
 		while let Err(e) = png(&g, &filename) {
-			println!("Can't write to file {}. {}", filename, e);
-			println!("Please enter correct name for output file:");
+			eprintln!("Can't write to file {}. {}", filename, e);
+			eprintln!("Please enter correct name for output file:");
 			filename = String::new();
 			if let Err(e) =
 				io::stdin().read_line(&mut filename) {
-				println!("{}", e);
+				eprintln!("{}", e);
 				return
 			};
 			filename = filename.trim().to_string();
@@ -111,6 +118,7 @@ struct Config {
 	eq: bool,
 	order: bool,
 	topplings: bool,
+	time: bool,
 	actions: Vec<Action>,
 }
 
@@ -176,6 +184,7 @@ sandpile finite 60x50 ascii+png id out/id.png".to_owned());
 		let mut group = false;
 		let mut out_ascii = false;
 		let mut out_png = false;
+		let mut time = false;
 		let mut topplings = false;
 		let mut order = false;
 		let mut eq = false;
@@ -194,11 +203,12 @@ sandpile finite 60x50 ascii+png id out/id.png".to_owned());
 					match out {
 						"ascii" => out_ascii = true,
 						"png" => out_png = true,
+						"time" => time = true,
 						"topplings" => topplings = true,
 						"order" => {group = true; order = true},
 						_ => return Err(format!("\
 Expected output format
-either '+'-separated 'ascii', 'png', 'topplings', and/or 'order'
+either '+'-separated 'ascii', 'png', 'time', 'topplings', and/or 'order'
 or sole 'eq' or 'recurrent'.
 Got: {}", out))
 					}
@@ -255,6 +265,7 @@ Got: {}", out))
 			eq,
 			order,
 			topplings,
+			time,
 			actions,
 		})
 	}

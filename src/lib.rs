@@ -81,6 +81,10 @@ impl GridSandpile {
 			grid,
 			last_topple: 0,
 		};
+		if grid_type == GridType::Infinite(0, 0) && sandpile.grid.len() == 1 && sandpile.grid[0].len() == 1 {
+			sandpile.delta00_infinite_optimized();
+			return Ok(Box::new(sandpile))
+		}
 		if grid_type == GridType::Toroidal {
 			sandpile.grid[0][0] = 0;
 		}
@@ -339,6 +343,91 @@ impl GridSandpile {
 		count
 	}
 	
+	fn delta00_infinite_optimized(&mut self) {
+		assert_eq!(self.grid_type, GridType::Infinite(0, 0));
+		assert_eq!(self.grid.len(), 1);
+		assert_eq!(self.grid[0].len(), 1);
+		let mut excessive = vec![(0, 0)];
+		let mut ex2;
+		let mut count = 0;
+		while !excessive.is_empty() {
+			ex2 = Vec::new();
+			for (i, j) in excessive {
+				let d = self.grid[i][j] / self.neighbourhood.neighbours();
+				if d == 0 {
+					continue;
+				}
+				if i + 1 == self.grid.len() {
+					for row in self.grid.iter_mut() {
+						row.push(0);
+					}
+					self.grid.push(vec![0; self.grid[0].len()]);
+				}
+				self.grid[i][j] %= self.neighbourhood.neighbours();
+				count += match (i, j) {
+					(0, 0) => 1,
+					(_, 0) => 4,
+					(i, j) if i == j => 4,
+					_ => 8,
+				} * d as u64;
+				let mut topple_to: Vec<_> = match (i, j) {
+					(0, 0) => vec![(1, 0)],
+					(1, 0) => vec![(2, 0), (0, 0), (1, 1), (1, 1)],
+					(1, 1) => vec![(1, 0), (1, 0), (2, 1)],
+					(i, 0) => vec![(i-1, 0), (i, 1), (i+1, 0)],
+					(2, 1) => vec![(1, 1), (1, 1), (2, 0), (2, 0), (2, 2), (2, 2), (3, 1)],
+					(i, j) if i == j => vec![(i, j-1), (i+1, j)],
+					(i, 1) => vec![(i, 0), (i, 0), (i-1, 1), (i, 2), (i+1, 1)],
+					(i, j) if i == j+1 => vec![(j, j), (j, j), (i, i), (i, i), (i+1, j), (i, j-1)],
+					(i, j) => vec![(i-1, j), (i, j+1), (i+1, j), (i, j-1)],
+				};
+				if self.neighbourhood == Neighbourhood::Moore {
+					let mut t2: Vec<_> = match (i, j) {
+						(0, 0) => vec![(1, 1)],
+						(1, 0) => vec![(2, 1), (1, 0), (1, 0)],
+						(1, 1) => vec![(0, 0), (2, 0), (2, 0), (2, 2)],
+						(2, 0) => vec![(1, 1), (1, 1), (3, 1)],
+						(2, 1) => vec![(1, 0), (1, 0), (3, 0), (3, 0), (2, 1), (3, 2)],
+						(i, j) if i == j => vec![(i-1, j-1), (i+1, j-1), (i+1, j+1)],
+						(i, 0) => vec![(i-1, 1), (i+1, 1)],
+						(3, 1) => vec![(2, 0), (2, 0), (4, 0), (4, 0), (2, 2), (2, 2), (4, 2)],
+						(i, j) if i == j+1 => vec![(i-1, j-1), (i+1, j-1), (i+1, j+1), (i, j)],
+						(i, j) if i == j+2 => vec![(i-1, j-1), (i+1, j-1), (i+1, j+1), (i-1, j+1), (i-1, j+1)],
+						(i, j) => vec![(i-1, j-1), (i+1, j-1), (i+1, j+1), (i-1, j+1)],
+					};
+					topple_to.append(&mut t2);
+				}
+				for (ti, tj) in topple_to {
+					self.grid[ti][tj] += if (ti, tj) == (0, 0) {4*d} else {d};
+					if let Some(p) = ex2.last() {
+						if *p == (ti, tj) {
+							continue
+						}
+					}
+					if self.grid[ti][tj] >= self.neighbourhood.neighbours() {
+						ex2.push((ti, tj));
+					}
+				}
+			}
+			excessive = ex2;
+		}
+		self.last_topple = count;
+		self.grid_type = GridType::Infinite(self.grid.len()-1, self.grid.len()-1);
+		for i in 1..self.grid.len() {
+			for j in 0..i {
+				self.grid[j][i] = self.grid[i][j];
+			}
+		}
+		for row in &mut self.grid {
+			let mut mirrow: Vec<_> = row.iter().skip(1).rev().map(|x| *x).collect();
+			mirrow.append(row);
+			*row = mirrow;
+		}
+		let mut mirrid: Vec<_> = self.grid.iter().skip(1).rev().map(|x| x.clone()).collect();
+		mirrid.append(&mut self.grid);
+		self.grid = mirrid;
+	}
+	
 	pub fn last_topple(&self) -> u64 {
 		self.last_topple
 	}
@@ -464,7 +553,13 @@ mod tests {
 	
 	#[test]
 	fn infinite_delta00() {
-		let s = GridSandpile::from_grid(GridType::Infinite(0, 0), Neighbourhood::VonNeumann, vec![vec![16]]).unwrap();
+		let mut s = GridSandpile {
+			grid_type: GridType::Infinite(0, 0),
+			neighbourhood: Neighbourhood::VonNeumann,
+			grid: vec![vec![16]],
+			last_topple: 0,
+		};
+		s.topple();
 		let s2 = GridSandpile::from_grid(GridType::Infinite(0, 0), Neighbourhood::VonNeumann, vec![
 			vec![0, 0, 1, 0, 0],
 			vec![0, 2, 1, 2, 0],
@@ -472,6 +567,28 @@ mod tests {
 			vec![0, 2, 1, 2, 0],
 			vec![0, 0, 1, 0, 0],
 		]).unwrap();
+		assert_eq!(s.grid, s2.grid);
+	}
+	
+	#[test]
+	fn infinite_delta00_optimized() {
+		let mut s = GridSandpile {
+			grid_type: GridType::Infinite(0, 0),
+			neighbourhood: Neighbourhood::VonNeumann,
+			grid: vec![vec![200]],
+			last_topple: 0,
+		};
+		s.topple();
+		let s2 = GridSandpile::from_grid(GridType::Infinite(0, 0), Neighbourhood::VonNeumann, vec![vec![200]]).unwrap();
+		assert_eq!(s.grid, s2.grid);
+		let mut s = GridSandpile {
+			grid_type: GridType::Infinite(0, 0),
+			neighbourhood: Neighbourhood::Moore,
+			grid: vec![vec![200]],
+			last_topple: 0,
+		};
+		s.topple();
+		let s2 = GridSandpile::from_grid(GridType::Infinite(0, 0), Neighbourhood::Moore, vec![vec![200]]).unwrap();
 		assert_eq!(s.grid, s2.grid);
 	}
 	
