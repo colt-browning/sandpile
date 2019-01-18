@@ -47,12 +47,13 @@ impl PartialEq for GridSandpile {
 
 impl Eq for GridSandpile {}
 
+pub const VIS: [char; 9] = [' ', '.', ':', '&', '#', '5', '6', '7', '8'];
+
 impl fmt::Display for GridSandpile {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		let vis = [" ", ".", ":", "&", "#", "5", "6", "7", "8"];
 		for row in &self.grid {
 			for el in row {
-				write!(f, "{}", vis[if *el < 8 {*el} else {8} as usize])?;
+				write!(f, "{}", VIS[if *el < 8 {*el} else {8} as usize])?;
 			}
 			writeln!(f)?;
 		}
@@ -96,19 +97,14 @@ impl GridSandpile {
 		let mut g = Vec::new();
 		for line in s.lines() {
 			let mut row = Vec::new();
-			for ch in line.chars() {
-				row.push(match ch {
-					' ' => 0,
-					'.' => 1,
-					':' => 2,
-					'&' => 3,
-					'#' => 4,
-					'5' => 5,
-					'6' => 6,
-					'7' => 7,
-					'8' => 8,
-					_ => return Err(SandpileError::UnknownSymbol(ch))
-				});
+			'l: for ch in line.chars() {
+				for (n, &vch) in VIS.iter().enumerate() {
+					if ch == vch {
+						row.push(n as Cell);
+						continue 'l
+					}
+				}
+				return Err(SandpileError::UnknownSymbol(ch))
 			}
 			g.push(row);
 		}
@@ -581,6 +577,7 @@ mod tests {
 		s.topple();
 		let s2 = GridSandpile::from_grid(GridType::Infinite(0, 0), Neighbourhood::VonNeumann, vec![vec![200]]).unwrap();
 		assert_eq!(s.grid, s2.grid);
+		assert_eq!(s.last_topple, s2.last_topple);
 		let mut s = GridSandpile {
 			grid_type: GridType::Infinite(0, 0),
 			neighbourhood: Neighbourhood::Moore,
@@ -590,6 +587,7 @@ mod tests {
 		s.topple();
 		let s2 = GridSandpile::from_grid(GridType::Infinite(0, 0), Neighbourhood::Moore, vec![vec![200]]).unwrap();
 		assert_eq!(s.grid, s2.grid);
+		assert_eq!(s.last_topple, s2.last_topple);
 	}
 	
 	#[test]
