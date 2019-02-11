@@ -41,7 +41,7 @@ pub struct GridSandpile {
 
 impl PartialEq for GridSandpile {
 	fn eq(&self, other: &GridSandpile) -> bool {
-		self.grid_type == other.grid_type && self.grid == other.grid
+		self.grid_type == other.grid_type && self.neighbourhood == other.neighbourhood && self.grid == other.grid
 	}
 }
 
