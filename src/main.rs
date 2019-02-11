@@ -11,42 +11,33 @@ use std::{
 };
 
 fn main() {
-	let mut config = match Config::new(&mut std::env::args()) {
-		Ok(config) => config,
-		Err(e) => {
-			eprintln!("{}", e);
-			return
-		}
-	};
+	if let Err(e) = (|| {
+		let config = Config::new(&mut std::env::args())?;
+		run(config)
+	})() {
+		eprintln!("{}", e);
+	}
+}
+
+fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 	let (x, y) = config.dimensions;
 	let mut stack = Vec::new();
 	let time = std::time::SystemTime::now();
 	while let Some(action) = config.actions.pop() {
 		match action {
 			Action::Id => stack.push(GridSandpile::neutral(config.grid_type, config.neighbourhood, config.dimensions)),
-			Action::Read => match || -> Result<_, Box<dyn Error>> {
+			Action::Read => {
 				let mut g = String::new();
 				for _ in 0..y {
 					io::stdin().read_line(&mut g)?;
 				}
 				let a = GridSandpile::from_string(config.grid_type, config.neighbourhood, config.dimensions, g)?;
-				Ok(a)
-			}() {
-				Ok(x) => stack.push(x),
-				Err(e) => {
-					eprintln!("{}", e);
-					return
-				}
+				stack.push(a)
 			},
-			Action::ReadList => match read_list(x, y) {
-				Ok(grid) => {
-					let a = GridSandpile::from_grid(config.grid_type, config.neighbourhood, grid).unwrap();
-					stack.push(a);
-				},
-				Err(e) => {
-					eprintln!("{}", e);
-					return
-				}
+			Action::ReadList => {
+				let grid = read_list(x, y)?;
+				let a = GridSandpile::from_grid(config.grid_type, config.neighbourhood, grid).unwrap();
+				stack.push(a)
 			},
 			Action::All(n) => {
 				let a = GridSandpile::from_grid(config.grid_type, config.neighbourhood, vec![vec![n; x]; y]).unwrap();
@@ -55,14 +46,11 @@ fn main() {
 			Action::Inverse => {
 				let a = stack.pop().unwrap();
 				let g = a.inverse();
-				stack.push(g);
+				stack.push(g)
 			}
 			Action::Add => {
 				let mut a = stack.pop().unwrap();
-				if let Err(e) = a.add(&stack.pop().unwrap()) {
-					eprintln!("{}", e);
-					return
-				}
+				a.add(&stack.pop().unwrap())?;
 				stack.push(a)
 			},
 			Action::Dup => {
@@ -75,7 +63,7 @@ fn main() {
 	if config.eq {
 		let a2 = stack.pop().unwrap();
 		println!("{}", a == a2);
-		return
+		return Ok(())
 	}
 	if config.topplings {
 		println!("Topplings: {}", a.last_topple());
@@ -98,14 +86,11 @@ fn main() {
 			eprintln!("Can't write to file {}. {}", filename, e);
 			eprintln!("Please enter correct name for output file:");
 			filename = String::new();
-			if let Err(e) =
-				io::stdin().read_line(&mut filename) {
-				eprintln!("{}", e);
-				return
-			};
+			io::stdin().read_line(&mut filename)?;
 			filename = filename.trim().to_string();
 		}
 	}
+	Ok(())
 }
 
 #[derive(Debug)]

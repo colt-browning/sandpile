@@ -62,7 +62,7 @@ impl fmt::Display for GridSandpile {
 }
 
 impl GridSandpile {
-	pub fn from_grid(grid_type: GridType, neighbourhood: Neighbourhood, grid: Grid) -> Result<Box<GridSandpile>, SandpileError> {
+	fn verify_rectangular_grid(grid: Grid) -> Result<Grid, SandpileError> {
 		if grid.is_empty() {
 			return Err(SandpileError::EmptyGrid);
 		}
@@ -76,6 +76,11 @@ impl GridSandpile {
 				return Err(SandpileError::UnequalRowLengths(grid, l, i, l2));
 			}
 		}
+		Ok(grid)
+	}
+
+	pub fn from_grid(grid_type: GridType, neighbourhood: Neighbourhood, grid: Grid) -> Result<Box<GridSandpile>, SandpileError> {
+		let grid = Self::verify_rectangular_grid(grid)?;
 		let mut sandpile = GridSandpile {
 			grid_type,
 			neighbourhood,
@@ -85,9 +90,6 @@ impl GridSandpile {
 		if grid_type == GridType::Infinite(0, 0) && sandpile.grid.len() == 1 && sandpile.grid[0].len() == 1 {
 			sandpile.delta00_infinite_optimized();
 			return Ok(Box::new(sandpile))
-		}
-		if grid_type == GridType::Toroidal {
-			sandpile.grid[0][0] = 0;
 		}
 		sandpile.topple();
 		Ok(Box::new(sandpile))
@@ -188,9 +190,6 @@ impl GridSandpile {
 				*el = t - *el;
 			}
 		}
-		if grid_type == GridType::Toroidal {
-			sandpile.grid[0][0] = 0;
-		}
 		sandpile.topple();
 		sandpile
 	}
@@ -200,6 +199,9 @@ impl GridSandpile {
 	}
 
 	fn topple(&mut self) -> u64 {
+		if self.grid_type == GridType::Toroidal {
+			self.grid[0][0] = 0;
+		}
 		let mut excessive = Vec::new();
 		let mut ex2;
 		for i in 0..self.grid.len() {
@@ -438,9 +440,6 @@ impl GridSandpile {
 			for x in 0..self.grid[0].len() {
 				sandpile.grid[y][x] = 2 * (t - sandpile.grid[y][x]) - self.grid[y][x];
 			}
-		}
-		if self.grid_type == GridType::Toroidal {
-			sandpile.grid[0][0] = 0;
 		}
 		sandpile.topple();
 		sandpile
