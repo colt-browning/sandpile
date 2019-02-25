@@ -194,6 +194,43 @@ impl GridSandpile {
 		sandpile
 	}
 
+	pub fn burn(grid_type: GridType, neighbourhood: Neighbourhood, (x, y): (usize, usize)) -> Box<GridSandpile> {
+		let mut g = vec![vec![0; x]; y];
+		match grid_type {
+			GridType::Finite => {
+				let border_neighbours = match neighbourhood {
+					Neighbourhood::VonNeumann => 1,
+					Neighbourhood::Moore => 3,
+				};
+				for j in 0..x {
+					g[0][j] = border_neighbours;
+					g[y-1][j] += border_neighbours;
+				}
+				for i in 0..y {
+					g[i][0] += border_neighbours;
+					g[i][x-1] += border_neighbours;
+				}
+				if neighbourhood == Neighbourhood::Moore {
+					for &(i, j) in &[(0, 0), (0, x-1), (y-1, 0), (y-1, x-1)] {
+						g[i][j] -= 1;
+					}
+				}
+			},
+			GridType::Toroidal => {
+				for &(i, j) in &[(0, 1%x), (1%y, 0), (y-1, 0), (0, x-1)] {
+					g[i][j] += 1;
+				}
+				if neighbourhood == Neighbourhood::Moore {
+					for &(i, j) in &[(1%y, 1%x), (1%y, x-1), (y-1, 1%x), (y-1, x-1)] {
+						g[i][j] += 1;
+					}
+				}
+			},
+			GridType::Infinite(..) => panic!()
+		};
+		GridSandpile::from_grid(grid_type, neighbourhood, g).unwrap()
+	}
+
 	pub fn into_grid(self) -> Grid {
 		self.grid
 	}

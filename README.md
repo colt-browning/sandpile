@@ -54,6 +54,7 @@ The following commands are available:
 * `read`: read a sandpile from the standard input using the same format as the `ascii` output, push;
 * `read_list`: read the list of chips from stdin as pairs of coordinates: `0 0, 0 1, 0 1, 2 1.`, push;
 * `all-N`: a sandpile with `N` chips in every node, push;
+* `burn`: in an empty sandpile, the sink emits a chip to every neighbouring cell, push;
 * `add`: pop two sandpiles from the stack, add them together, push the result;
 * `inverse`: pop a sandpile from the stack, take its inverse if it is recurrent (if no, the result will still give the identity element when added to the original sandpile), push the result;
 * `dup`: pop a sandpile and push it back twice.

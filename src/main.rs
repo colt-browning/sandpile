@@ -26,6 +26,7 @@ fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 	while let Some(action) = config.actions.pop() {
 		match action {
 			Action::Id => stack.push(GridSandpile::neutral(config.grid_type, config.neighbourhood, config.dimensions)),
+			Action::Burn => stack.push(GridSandpile::burn(config.grid_type, config.neighbourhood, config.dimensions)),
 			Action::Read => {
 				let mut g = String::new();
 				for _ in 0..y {
@@ -110,6 +111,7 @@ struct Config {
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum Action {
 	Id,
+	Burn,
 	Read,
 	ReadList,
 	All(sandpile::Cell),
@@ -181,7 +183,7 @@ sandpile finite 60x50 ascii+png id out/id.png".to_owned());
 				actions_expected = 2;
 			} else if s == "recurrent" {
 				eq = true;
-				actions = vec![Action::Add, Action::Id, Action::Dup];
+				actions = vec![Action::Add, Action::Burn, Action::Dup];
 				group = true;
 			} else {
 				for out in s.split("+") {
@@ -206,13 +208,14 @@ Got: {}", out))
 			let arg = match args.next() {
 				Some(s) => s,
 				None => return Err(if actions.is_empty() {
-					"Please specify target: 'id', 'read', 'read_list', 'all-N', 'inverse', 'dup', or 'add'."
+					"Please specify target: 'id', 'read', 'read_list', 'all-N', 'burn', 'inverse', 'dup', or 'add'."
 				} else {
 					"Target list terminated unexpectedly."
 				}.to_owned())
 			};
 			let (action, incr) = match arg.as_str() {
 				"id" => {group = true; (Action::Id, 0)},
+				"burn" => {group = true; (Action::Burn, 0)},
 				"read" => (Action::Read, 0),
 				"read_list" => (Action::ReadList, 0),
 				s if s.starts_with("all-") => match s[4..].parse::<sandpile::Cell>() {
