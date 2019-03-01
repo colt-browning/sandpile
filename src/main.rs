@@ -263,7 +263,7 @@ fn read_list(x: usize, y: usize) -> Result<sandpile::Grid, Box<dyn Error>> {
 	let mut g = String::new();
 	while !g.ends_with(".") {
 		io::stdin().read_line(&mut g)?;
-		g = g.trim_right().to_string();
+		g = g.trim_end().to_string();
 	}
 	let mut grid = vec![vec![0; x]; y];
 	for s in g[..g.len()-1].split_terminator(',') {
