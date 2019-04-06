@@ -182,6 +182,9 @@ impl GridSandpile {
 		if let GridType::Infinite(..) = grid_type {
 			panic!()
 		}
+		if grid_type == GridType::Finite && neighbourhood == Neighbourhood::VonNeumann && x % 2 == 0 && y == x && x >= 6 {
+			return GridSandpile::neutral_finite_vn_es_optimized(x/2)
+		}
 	// Proposition 6.36 of http://people.reed.edu/~davidp/divisors_and_sandpiles/
 		let t = 2 * (neighbourhood.neighbours() - 1);
 		let mut sandpile = GridSandpile::from_grid(grid_type, neighbourhood, vec![vec![t; x]; y]).unwrap();
@@ -192,6 +195,34 @@ impl GridSandpile {
 		}
 		sandpile.topple();
 		sandpile
+	}
+	
+	fn neutral_finite_vn_es_optimized(x: usize) -> Box<GridSandpile> { // es = even square
+		let t = 6;
+		let mut symmetric_grid: Vec<_> = (0..x).map(|i| vec![t; i+1]).collect();
+		topple_finite_vn_es_optimized(&mut symmetric_grid);
+		for row in &mut symmetric_grid {
+			for el in row {
+				*el = t - *el;
+			}
+		}
+		topple_finite_vn_es_optimized(&mut symmetric_grid);
+		for i in 0..x {
+			for j in i+1..x {
+				let sc = symmetric_grid[j][i];
+				symmetric_grid[i].push(sc);
+			}
+		}
+		let mut grid = Vec::new();
+		while let Some(mut s_row) = symmetric_grid.pop() {
+			let mut row: Vec<_> = s_row.clone().into_iter().rev().collect();
+			row.append(&mut s_row);
+			grid.push(row);
+		}
+		for i in 1..=x {
+			grid.push(grid[x-i].clone());
+		}
+		GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, grid).unwrap()
 	}
 
 	pub fn burn(grid_type: GridType, neighbourhood: Neighbourhood, (x, y): (usize, usize)) -> Box<GridSandpile> {
@@ -565,6 +596,53 @@ pub fn png(grid: &Grid, fname: &str) -> io::Result<()> {
 	repng::encode(File::create(fname)?, grid[0].len() as u32, grid.len() as u32, &pixels)
 }
 
+fn topple_finite_vn_es_optimized(grid: &mut Vec<Vec<Cell>>) {
+	let x = grid.len();
+	assert!(x > 2);
+	let mut excessive = Vec::new();
+	for i in 0..x {
+		assert_eq!(i+1, grid[i].len());
+		for j in 0..grid[i].len() {
+			excessive.push((i, j));
+		}
+	}
+	let mut ex2;
+	while !excessive.is_empty() {
+		ex2 = Vec::new();
+		for (i, j) in excessive {
+			let d = grid[i][j] / 4;
+			if d == 0 {
+				continue;
+			}
+			grid[i][j] %= 4;
+			let topple_to: Vec<_> = match (i, j) {
+				(0, 0) => vec![(0, 0), (0, 0), (1, 0)],
+				(1, 0) => vec![(1, 0), (2, 0), (0, 0), (0, 0), (1, 1), (1, 1)],
+				(i, j) if i == x-1 && j == x-1 => vec![(x-1, x-2)],
+				(i, j) if i == j => vec![(i+1, i), (i, i-1)],
+				(i, 0) if i == x-1 => vec![(x-1, 0), (x-2, 0), (x-1, 1)],
+				(i, 0) => vec![(i, 0), (i-1, 0), (i+1, 0), (i, 1)],
+				(i, j) if i == x-1 && j == x-2 => vec![(x-1, x-1), (x-1, x-1), (x-2, x-2), (x-2, x-2), (x-1, x-3)],
+				(i, j) if j == i-1 => vec![(i-1, j), (i-1, j), (i, j+1), (i, j+1), (i, j-1), (i+1, j)],
+				(i, j) if i == x-1 => vec![(x-1, j-1), (x-1, j+1), (x-2, j)],
+				(i, j) => vec![(i-1, j), (i+1, j), (i, j-1), (i, j+1)],
+			};
+			for (ti, tj) in topple_to {
+				grid[ti][tj] += d;
+				if let Some(p) = ex2.last() {
+					if *p == (ti, tj) {
+						continue
+					}
+				}
+				if grid[ti][tj] >= 4 {
+					ex2.push((ti, tj));
+				}
+			}
+		}
+		excessive = ex2;
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -574,6 +652,34 @@ mod tests {
 		let s = GridSandpile::neutral(GridType::Finite, Neighbourhood::VonNeumann, (3, 2));
 		let g = s.into_grid();
 		assert_eq!(g, vec![vec![2, 1, 2], vec![2, 1, 2]]);
+	}
+	
+	#[test]
+	fn id_finite_optimized() {
+		let s = GridSandpile::neutral(GridType::Finite, Neighbourhood::VonNeumann, (6, 6));
+		let g = s.into_grid();
+		assert_eq!(g, vec![
+			vec![2, 1, 3, 3, 1, 2],
+			vec![1, 2, 2, 2, 2, 1],
+			vec![3, 2, 2, 2, 2, 3],
+			vec![3, 2, 2, 2, 2, 3],
+			vec![1, 2, 2, 2, 2, 1],
+			vec![2, 1, 3, 3, 1, 2],
+		]);
+		let s = GridSandpile::neutral(GridType::Finite, Neighbourhood::VonNeumann, (10, 10));
+		let g = s.into_grid();
+		assert_eq!(g, vec![
+			vec![2, 3, 3, 0, 3, 3, 0, 3, 3, 2],
+			vec![3, 2, 2, 1, 2, 2, 1, 2, 2, 3],
+			vec![3, 2, 2, 3, 3, 3, 3, 2, 2, 3],
+			vec![0, 1, 3, 2, 2, 2, 2, 3, 1, 0],
+			vec![3, 2, 3, 2, 2, 2, 2, 3, 2, 3],
+			vec![3, 2, 3, 2, 2, 2, 2, 3, 2, 3],
+			vec![0, 1, 3, 2, 2, 2, 2, 3, 1, 0],
+			vec![3, 2, 2, 3, 3, 3, 3, 2, 2, 3],
+			vec![3, 2, 2, 1, 2, 2, 1, 2, 2, 3],
+			vec![2, 3, 3, 0, 3, 3, 0, 3, 3, 2],
+		]);
 	}
 	
 	#[test]
