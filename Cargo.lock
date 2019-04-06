@@ -94,7 +94,7 @@ dependencies = [
 
 [[package]]
 name = "sandpile"
-version = "0.12.6"
+version = "0.12.7"
 dependencies = [
  "repng 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

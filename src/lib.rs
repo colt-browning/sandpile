@@ -599,6 +599,12 @@ pub fn png(grid: &Grid, fname: &str) -> io::Result<()> {
 fn topple_finite_vn_es_optimized(grid: &mut Vec<Vec<Cell>>) {
 	let x = grid.len();
 	assert!(x > 2);
+	let mut ex_table = Vec::new();
+	for i in 0..x {
+		ex_table.push(vec![true; i+1]);
+	}
+	let mut use_vec = false;
+	let lim = x + x*x/50;
 	let mut excessive = Vec::new();
 	for i in 0..x {
 		assert_eq!(i+1, grid[i].len());
@@ -607,9 +613,34 @@ fn topple_finite_vn_es_optimized(grid: &mut Vec<Vec<Cell>>) {
 		}
 	}
 	let mut ex2;
-	while !excessive.is_empty() {
-		ex2 = Vec::new();
-		for (i, j) in excessive {
+	while !use_vec || !excessive.is_empty() {
+		let use_vec_now = use_vec;
+		use_vec = true;
+		ex2 = Vec::with_capacity(lim+1);
+		let mut i = 0;
+		let mut j = 0;
+		loop {
+			if use_vec_now {
+				if let Some((ix, jx)) = excessive.pop() {
+					i = ix;
+					j = jx;
+				} else {
+					break
+				}
+			} else {
+				if !ex_table[i][j] {
+					j += 1;
+					if j > i {
+						j = 0;
+						i += 1;
+						if i == x {
+							break
+						}
+					}
+					continue
+				}
+			}
+			ex_table[i][j] = false;
 			let d = grid[i][j] / 4;
 			if d == 0 {
 				continue;
@@ -635,7 +666,24 @@ fn topple_finite_vn_es_optimized(grid: &mut Vec<Vec<Cell>>) {
 					}
 				}
 				if grid[ti][tj] >= 4 {
-					ex2.push((ti, tj));
+					ex_table[ti][tj] = true;
+					if use_vec {
+						ex2.push((ti, tj));
+						if ex2.len() >= lim {
+							ex2.clear();
+							use_vec = false;
+						}
+					}
+				}
+			}
+			if !use_vec_now {
+				j += 1;
+				if j > i {
+					j = 0;
+					i += 1;
+					if i == x {
+						break
+					}
 				}
 			}
 		}
