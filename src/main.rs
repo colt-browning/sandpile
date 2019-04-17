@@ -124,10 +124,10 @@ impl Config {
 	fn new(args: &mut std::iter::Iterator<Item = String>) -> Result<Config, String> {
 		args.next();
 		let grid_type_err = Err("\
-Please specify grid type ('finite', 'torus', or 'infinite') as the 1st command line argument.
-To use Moore neighbourhood (8 neighbours), type 'finite.moore' etc.
+Please specify grid type ('rectangle', 'torus', or 'infinite') as the 1st command line argument.
+To use Moore neighbourhood (8 neighbours), type 'rectangle.moore' etc.
 Example of a correct call (with cargo, use 'cargo run --release' instead of 'sandpile'):
-sandpile finite 60x50 ascii+png id out/id.png".to_owned());
+sandpile rectangle 60x50 ascii+png id out/id.png".to_owned());
 		let grid_type = match args.next() {
 			Some(s) => s,
 			None => return grid_type_err
@@ -139,7 +139,7 @@ sandpile finite 60x50 ascii+png id out/id.png".to_owned());
 			_ => return grid_type_err
 		};
 		let grid_type = match grid_type {
-			"finite" => GridType::Finite,
+			"rectangle" | "rectangular" | "finite" => GridType::Rectangular,
 			"infinite" => GridType::Infinite(0, 0),
 			"torus" | "toroidal"  => GridType::Toroidal,
 			_ => return grid_type_err

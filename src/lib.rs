@@ -10,10 +10,10 @@ pub type Grid = Vec<Vec<Cell>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GridType {
-	Finite,		// Finite rectangular grid with sink all around the grid.
-	Toroidal,	// Toroidal rectangular grid with sink at the top-left node.
+	Rectangular,	// Finite rectangular grid with sink all around the grid.
+	Toroidal,   	// Toroidal rectangular grid with sink at the top-left node.
 	Infinite(usize, usize),	// Auto-extending grid with no sink.
-							// Origin at given position. No sandpile group.
+	                       	// Origin at given position. No sandpile group.
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -182,7 +182,7 @@ impl GridSandpile {
 		if let GridType::Infinite(..) = grid_type {
 			panic!()
 		}
-		if grid_type == GridType::Finite && neighbourhood == Neighbourhood::VonNeumann && x % 2 == 0 && y == x && x >= 6 {
+		if grid_type == GridType::Rectangular && neighbourhood == Neighbourhood::VonNeumann && x % 2 == 0 && y == x && x >= 6 {
 			return GridSandpile::neutral_finite_vn_es_optimized(x/2)
 		}
 	// Proposition 6.36 of http://people.reed.edu/~davidp/divisors_and_sandpiles/
@@ -222,13 +222,13 @@ impl GridSandpile {
 		for i in 1..=x {
 			grid.push(grid[x-i].clone());
 		}
-		GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, grid).unwrap()
+		GridSandpile::from_grid(GridType::Rectangular, Neighbourhood::VonNeumann, grid).unwrap()
 	}
 
 	pub fn burn(grid_type: GridType, neighbourhood: Neighbourhood, (x, y): (usize, usize)) -> Box<GridSandpile> {
 		let mut g = vec![vec![0; x]; y];
 		match grid_type {
-			GridType::Finite => {
+			GridType::Rectangular => {
 				let border_neighbours = match neighbourhood {
 					Neighbourhood::VonNeumann => 1,
 					Neighbourhood::Moore => 3,
@@ -294,7 +294,7 @@ impl GridSandpile {
 				count += d as u64;
 				let mut topple_to = Vec::new();
 				match self.grid_type {
-					GridType::Finite => {
+					GridType::Rectangular => {
 						if i > 0 {
 							topple_to.push((i-1, j));
 						}
@@ -697,14 +697,14 @@ mod tests {
 
 	#[test]
 	fn id_finite() {
-		let s = GridSandpile::neutral(GridType::Finite, Neighbourhood::VonNeumann, (3, 2));
+		let s = GridSandpile::neutral(GridType::Rectangular, Neighbourhood::VonNeumann, (3, 2));
 		let g = s.into_grid();
 		assert_eq!(g, vec![vec![2, 1, 2], vec![2, 1, 2]]);
 	}
 	
 	#[test]
 	fn id_finite_optimized() {
-		let s = GridSandpile::neutral(GridType::Finite, Neighbourhood::VonNeumann, (6, 6));
+		let s = GridSandpile::neutral(GridType::Rectangular, Neighbourhood::VonNeumann, (6, 6));
 		let g = s.into_grid();
 		assert_eq!(g, vec![
 			vec![2, 1, 3, 3, 1, 2],
@@ -714,7 +714,7 @@ mod tests {
 			vec![1, 2, 2, 2, 2, 1],
 			vec![2, 1, 3, 3, 1, 2],
 		]);
-		let s = GridSandpile::neutral(GridType::Finite, Neighbourhood::VonNeumann, (10, 10));
+		let s = GridSandpile::neutral(GridType::Rectangular, Neighbourhood::VonNeumann, (10, 10));
 		let g = s.into_grid();
 		assert_eq!(g, vec![
 			vec![2, 3, 3, 0, 3, 3, 0, 3, 3, 2],
@@ -783,7 +783,7 @@ mod tests {
 	#[test]
 	fn from_string() {
 		let st = "&. \n:.:\n";
-		let s = GridSandpile::from_string(GridType::Finite, Neighbourhood::VonNeumann, (3, 2), String::from(st)).unwrap();
+		let s = GridSandpile::from_string(GridType::Rectangular, Neighbourhood::VonNeumann, (3, 2), String::from(st)).unwrap();
 		let g = s.into_grid();
 		assert_eq!(g, vec![vec![3, 1, 0], vec![2, 1, 2]]);
 		let s = GridSandpile::from_string(GridType::Toroidal, Neighbourhood::VonNeumann, (3, 2), String::from(st)).unwrap();
@@ -794,7 +794,7 @@ mod tests {
 	#[test]
 	fn display() {
 		let g = vec![vec![3, 1, 0], vec![2, 1, 2]];
-		let s = GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, g.clone()).unwrap();
+		let s = GridSandpile::from_grid(GridType::Rectangular, Neighbourhood::VonNeumann, g.clone()).unwrap();
 		assert_eq!(format!("{}", s), String::from("&. \n:.:\n"));
 		let s = GridSandpile::from_grid(GridType::Toroidal, Neighbourhood::VonNeumann, g).unwrap();
 		assert_eq!(format!("{}", s), String::from(" . \n:.:\n"));
@@ -802,9 +802,9 @@ mod tests {
 	
 	#[test]
 	fn add() {
-		let mut s1 = GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, vec![vec![2, 1, 2], vec![3, 3, 1], vec![2, 3, 1]]).unwrap();
+		let mut s1 = GridSandpile::from_grid(GridType::Rectangular, Neighbourhood::VonNeumann, vec![vec![2, 1, 2], vec![3, 3, 1], vec![2, 3, 1]]).unwrap();
 		let r = s1.clone();
-		let s2 = GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, vec![vec![2, 1, 2], vec![1, 0, 1], vec![2, 1, 2]]).unwrap();
+		let s2 = GridSandpile::from_grid(GridType::Rectangular, Neighbourhood::VonNeumann, vec![vec![2, 1, 2], vec![1, 0, 1], vec![2, 1, 2]]).unwrap();
 		s1.add(&s2).unwrap();
 		assert_eq!(s1, r);
 		assert_eq!(r.last_topple(), 0);
@@ -813,22 +813,22 @@ mod tests {
 	
 	#[test]
 	fn order() {
-		let s = GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, vec![vec![3, 3, 3], vec![3, 3, 3]]).unwrap();
+		let s = GridSandpile::from_grid(GridType::Rectangular, Neighbourhood::VonNeumann, vec![vec![3, 3, 3], vec![3, 3, 3]]).unwrap();
 		assert_eq!(s.order(), 7);
 	}
 	
 	#[test]
 	fn inverse() {
-		let s = GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, vec![vec![3, 3, 3], vec![3, 3, 3]]).unwrap();
-		let i = GridSandpile::from_grid(GridType::Finite, Neighbourhood::VonNeumann, vec![vec![2, 3, 2], vec![2, 3, 2]]).unwrap();
+		let s = GridSandpile::from_grid(GridType::Rectangular, Neighbourhood::VonNeumann, vec![vec![3, 3, 3], vec![3, 3, 3]]).unwrap();
+		let i = GridSandpile::from_grid(GridType::Rectangular, Neighbourhood::VonNeumann, vec![vec![2, 3, 2], vec![2, 3, 2]]).unwrap();
 		assert_eq!(s.inverse(), i);
 	}
 	
 	#[test]
 	fn moore() {
 		assert_eq!(
-			GridSandpile::from_grid(GridType::Finite, Neighbourhood::Moore, vec![vec![0, 0, 0], vec![0, 9, 0], vec![0, 0, 0]]).unwrap(),
-			GridSandpile::from_grid(GridType::Finite, Neighbourhood::Moore, vec![vec![1, 1, 1], vec![1, 1, 1], vec![1, 1, 1]]).unwrap()
+			GridSandpile::from_grid(GridType::Rectangular, Neighbourhood::Moore, vec![vec![0, 0, 0], vec![0, 9, 0], vec![0, 0, 0]]).unwrap(),
+			GridSandpile::from_grid(GridType::Rectangular, Neighbourhood::Moore, vec![vec![1, 1, 1], vec![1, 1, 1], vec![1, 1, 1]]).unwrap()
 		);
 	}
 }

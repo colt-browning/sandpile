@@ -3,19 +3,19 @@ Implementation of the [sandpile model](https://en.wikipedia.org/wiki/Abelian_san
 Example calls:
 
 * Identity element:\
-`cargo run --release finite 60x50 ascii+png id out/id.png`
+`cargo run --release rectangle 60x50 ascii+png id out/id.png`
 * [Tropical curves](https://en.wikipedia.org/wiki/Tropical_geometry) (see [Geneva Tropical Wiki / tropicalsand](https://www.unige.ch/math/tggroup/doku.php?id=tropicalsand)):\
-`echo "2 6, 8 36, 12 13, 17 10." | cargo run --release finite 40 ascii+png add all-3 read_list out/tropical.png`
+`echo "2 6, 8 36, 12 13, 17 10." | cargo run --release rectangle 40 ascii+png add all-3 read_list out/tropical.png`
 * [OEIS A256046](https://oeis.org/A256046) (see also [A256045](https://oeis.org/A256045)):\
-`for ($n = 2; $n -lt 9; $n++) { cargo run --release finite $n order all-2 }` (PowerShell)
+`for ($n = 2; $n -lt 9; $n++) { cargo run --release rectangle $n order all-2 }` (PowerShell)
 or\
-`for n in {2..8}; do cargo run --release finite ${n} order all-2; done` (bash)
+`for n in {2..8}; do cargo run --release rectangle ${n} order all-2; done` (bash)
 * [OEIS A249872](https://oeis.org/A249872) (see also [A293452](https://oeis.org/A293452)):\
 `for ($n = 1; $n -lt 10; $n++) { cargo run --release torus $n topplings all-4 }`
 or\
 `for n in {1..9}; do cargo run --release torus ${n} topplings all-4; done`
 * Verify that `inverse` indeed gives inverse:\
-`cargo run --release finite 10 eq id add inverse dup all-3`
+`cargo run --release rectangle 10 eq id add inverse dup all-3`
 * Drop many chips to the origin of the infinite grid:\
 `cargo run --release infinite 1 png all-100000 out/1e5.png`
 
@@ -30,11 +30,11 @@ The executable file takes the following command line arguments (see details belo
 
 The underlying graph is always a rectangular grid. Various boundary conditions are available:
 
-* `finite` grid with sink all around the grid;
+* `rectangle`, finite grid with sink all around the grid;
 * `toroidal` grid with sink at the top-left node;
 * `infinite` auto-extending grid with no sink and no sandpile group (group operations are impossible).
 
-The default neighbourhood is the von Neumann neighbourhood (4 neighbours). To use Moore neighbourhood (8 neighbours), add `.moore` to the boundary condition, e. g., `finite.moore`.
+The default neighbourhood is the von Neumann neighbourhood (4 neighbours). To use Moore neighbourhood (8 neighbours), add `.moore` to the boundary condition, e. g., `rectangle.moore`.
 
 The size of an `N` by `M` grid is specified as `NxM`; simply `N` means `NxN`.
 
