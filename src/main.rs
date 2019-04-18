@@ -2,6 +2,7 @@ use sandpile::{
 	GridType,
 	Neighbourhood,
 	GridSandpile,
+	FiniteGridSandpile,
 	png,
 };
 
@@ -25,8 +26,8 @@ fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 	let time = std::time::SystemTime::now();
 	while let Some(action) = config.actions.pop() {
 		match action {
-			Action::Id => stack.push(GridSandpile::neutral(config.grid_type, config.neighbourhood, config.dimensions)),
-			Action::Burn => stack.push(GridSandpile::burn(config.grid_type, config.neighbourhood, config.dimensions)),
+			Action::Id => stack.push(FiniteGridSandpile::neutral(config.grid_type, config.neighbourhood, config.dimensions)),
+			Action::Burn => stack.push(FiniteGridSandpile::burn(config.grid_type, config.neighbourhood, config.dimensions)),
 			Action::Read => {
 				let mut g = String::new();
 				for _ in 0..y {
@@ -46,7 +47,7 @@ fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 			},
 			Action::Inverse => {
 				let a = stack.pop().unwrap();
-				let g = a.inverse();
+				let g = a.as_finite_grid_sandpile().unwrap().inverse();
 				stack.push(g)
 			}
 			Action::Add => {
@@ -70,7 +71,7 @@ fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 		println!("Topplings: {}", a.last_topple());
 	}
 	if config.order {
-		println!("Order: {}", a.order());
+		println!("Order: {}", a.as_finite_grid_sandpile().unwrap().order());
 	}
 	if config.time {
 		match time.elapsed() {
