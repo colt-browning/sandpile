@@ -1,5 +1,6 @@
 use sandpile::{
 	GridType,
+	FiniteGridType,
 	Neighbourhood,
 	GridSandpile,
 	FiniteGridSandpile,
@@ -140,9 +141,9 @@ sandpile rectangle 60x50 ascii+png id out/id.png".to_owned());
 			_ => return grid_type_err
 		};
 		let grid_type = match grid_type {
-			"rectangle" | "rectangular" | "finite" => GridType::Rectangular,
+			"rectangle" | "rectangular" | "finite" => GridType::Finite(FiniteGridType::Rectangular),
 			"infinite" => GridType::Infinite(0, 0),
-			"torus" | "toroidal"  => GridType::Toroidal,
+			"torus" | "toroidal"  => GridType::Finite(FiniteGridType::Toroidal),
 			_ => return grid_type_err
 		};
 		let (x, y) = match || -> Option<_> {
