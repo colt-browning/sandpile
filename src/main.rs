@@ -27,8 +27,8 @@ fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 	let time = std::time::SystemTime::now();
 	while let Some(action) = config.actions.pop() {
 		match action {
-			Action::Id => stack.push(FiniteGridSandpile::neutral(config.grid_type, config.neighbourhood, config.dimensions)),
-			Action::Burn => stack.push(FiniteGridSandpile::burn(config.grid_type, config.neighbourhood, config.dimensions)),
+			Action::Id => stack.push(FiniteGridSandpile::neutral(config.grid_type.finite()?, config.neighbourhood, config.dimensions)),
+			Action::Burn => stack.push(FiniteGridSandpile::burn(config.grid_type.finite()?, config.neighbourhood, config.dimensions)),
 			Action::Read => {
 				let mut g = String::new();
 				for _ in 0..y {
@@ -39,16 +39,16 @@ fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 			},
 			Action::ReadList => {
 				let grid = read_list(x, y)?;
-				let a = GridSandpile::from_grid(config.grid_type, config.neighbourhood, grid).unwrap();
+				let a = GridSandpile::from_grid(config.grid_type, config.neighbourhood, grid)?;
 				stack.push(a)
 			},
 			Action::All(n) => {
-				let a = GridSandpile::from_grid(config.grid_type, config.neighbourhood, vec![vec![n; x]; y]).unwrap();
+				let a = GridSandpile::from_grid(config.grid_type, config.neighbourhood, vec![vec![n; x]; y])?;
 				stack.push(a)
 			},
 			Action::Inverse => {
 				let a = stack.pop().unwrap();
-				let g = a.as_finite_grid_sandpile().unwrap().inverse();
+				let g = a.as_finite_grid_sandpile()?.inverse();
 				stack.push(g)
 			}
 			Action::Add => {
@@ -72,7 +72,7 @@ fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 		println!("Topplings: {}", a.last_topple());
 	}
 	if config.order {
-		println!("Order: {}", a.as_finite_grid_sandpile().unwrap().order());
+		println!("Order: {}", a.as_finite_grid_sandpile()?.order());
 	}
 	if config.time {
 		match time.elapsed() {
