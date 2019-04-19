@@ -62,8 +62,8 @@ pub struct FiniteGridSandpile<'a> {
 	last_topple: u64,
 }
 
-impl<'a> FiniteGridSandpile<'a> {
-	pub fn as_ref(&self) -> &Grid {
+impl<'a> std::convert::AsRef<Grid> for FiniteGridSandpile<'a> {
+	fn as_ref(&self) -> &Grid {
 		self.grid
 	}
 }
@@ -452,8 +452,8 @@ impl GridSandpile {
 	}
 }
 
-impl<'a> GridSandpile {
-	pub fn as_finite_grid_sandpile(&'a self) -> Result<FiniteGridSandpile, SandpileError> {
+impl GridSandpile {
+	pub fn as_finite_grid_sandpile(&self) -> Result<FiniteGridSandpile, SandpileError> {
 		if let GridType::Finite(grid_type) = self.grid_type {
 			Ok(FiniteGridSandpile {
 				grid_type,
@@ -562,12 +562,7 @@ impl<'a> FiniteGridSandpile<'a> {
 
 	pub fn order(&self) -> u64
 	{
-		let mut a = GridSandpile {
-			grid_type: GridType::Finite(self.grid_type),
-			neighbourhood: self.neighbourhood,
-			last_topple: 0,
-			grid: self.grid.clone(),
-		};
+		let mut a = GridSandpile::from_grid(GridType::Finite(self.grid_type), self.neighbourhood, self.grid.clone()).unwrap();
 		a.add_grid_unchecked(self.grid);
 		let mut count = 1;
 		while &a.grid != self.grid {
@@ -743,7 +738,7 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn id_finite() {
+	fn id_rectangular() {
 		let s = FiniteGridSandpile::neutral(FiniteGridType::Rectangular, Neighbourhood::VonNeumann, (3, 2));
 		let g = s.into_grid();
 		assert_eq!(g, vec![vec![2, 1, 2], vec![2, 1, 2]]);

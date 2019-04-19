@@ -135,11 +135,11 @@ sandpile rectangle 60x50 ascii+png id out/id.png".to_owned());
 			None => return grid_type_err
 		};
 		let grid_type: Vec<_> = grid_type.split('.').collect();
-		let (grid_type, neighbourhood) = match grid_type.len() {
-			1 => (grid_type[0], Neighbourhood::VonNeumann),
-			2 => (grid_type[0], if grid_type[1] == "moore" {Neighbourhood::Moore} else {Neighbourhood::VonNeumann}),
+		let (grid_type, neighbourhood) = (grid_type[0], match grid_type.len() {
+			1 => Neighbourhood::VonNeumann,
+			2 if grid_type[1] == "moore" => Neighbourhood::Moore,
 			_ => return grid_type_err
-		};
+		});
 		let grid_type = match grid_type {
 			"rectangle" | "rectangular" | "finite" => GridType::Finite(FiniteGridType::Rectangular),
 			"infinite" => GridType::Infinite(0, 0),
@@ -210,9 +210,9 @@ Got: {}", out))
 			let arg = match args.next() {
 				Some(s) => s,
 				None => return Err(if actions.is_empty() {
-					"Please specify target: 'id', 'read', 'read_list', 'all-N', 'burn', 'inverse', 'dup', or 'add'."
+					"Please specify command: 'id', 'read', 'read_list', 'all-N', 'burn', 'inverse', 'dup', or 'add'."
 				} else {
-					"Target list terminated unexpectedly."
+					"Command list terminated unexpectedly."
 				}.to_owned())
 			};
 			let (action, incr) = match arg.as_str() {
@@ -222,18 +222,18 @@ Got: {}", out))
 				"read_list" => (Action::ReadList, 0),
 				s if s.starts_with("all-") => match s[4..].parse::<sandpile::Cell>() {
 					Ok(n) => (Action::All(n), 0),
-					Err(_e) => return Err("In target 'all-N', N must be a 32-bit number.".to_owned()),
+					Err(_e) => return Err("In command 'all-N', N must be a 32-bit number.".to_owned()),
 				},
 				"inverse" => {group = true; (Action::Inverse, 1)},
 				"add" => (Action::Add, 2),
 				"dup" => (Action::Dup, 0),
-				s => return Err(format!("Unknown target: {}", s))
+				s => return Err(format!("Unknown command: {}", s))
 			};
 			actions.push(action);
 			actions_expected += incr - 1;
 		}
 		if *actions.last().unwrap() == Action::Dup {
-			return Err("'dup' duplicates the next target, so at the point it occurs at least 2 targets should be expected, and at least 1 more should follow.".to_owned());
+			return Err("'dup' duplicates the top sandpile on the stack, so at the point it occurs at least 2 commands should be expected, and at least 1 more command should follow.".to_owned());
 		}
 		let filename = if out_png {
 			match args.next() {
@@ -241,10 +241,8 @@ Got: {}", out))
 				None => return Err("Please specify name for output png file as the final command line argument.".to_owned())
 			}
 		} else { String::new() };
-		if let GridType::Infinite(..) = grid_type {
-			if group {
-				return Err("For the infinite grid, outputs 'order' and 'recurrent' and targets 'id' and 'inverse' are impossible.".to_owned())
-			}
+		if grid_type.finite().is_err() && group {
+			return Err("For the infinite grid, outputs 'order' and 'recurrent' and commands 'id', 'burn', and 'inverse' are impossible.".to_owned())
 		}
 		Ok(Config {
 			grid_type,
