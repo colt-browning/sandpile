@@ -443,6 +443,10 @@ impl GridSandpile {
 		self.grid = mirrid;
 	}
 	
+	pub fn chips_count(&self) -> u64 {
+		self.grid.iter().map(|row| -> u64 { row.iter().map(|&x| x as u64).sum() }).sum()
+	}
+	
 	pub fn last_topple(&self) -> u64 {
 		self.last_topple
 	}

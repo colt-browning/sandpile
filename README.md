@@ -14,6 +14,10 @@ or\
 `for ($n = 1; $n -lt 10; $n++) { cargo run --release torus $n topplings all-4 }`
 or\
 `for n in {1..9}; do cargo run --release torus ${n} topplings all-4; done`
+* [OEIS A307652](https://oeis.org/A307652):\
+`for ($n = 1; $n -lt 10; $n++) { cargo run --release rectangle $n chips id }`
+or\
+`for n in {1..9}; do cargo run --release rectangle ${n} chips id; done`
 * Verify that `inverse` indeed gives inverse:\
 `cargo run --release rectangle 10 eq id add inverse dup all-3`
 * Drop many chips to the origin of the infinite grid:\
@@ -44,6 +48,7 @@ The following output options are available (all but the last one expect a single
 * `png`: save png image of the sandpile to a file specified by the final command line argument;
 * `time`: how much time did the program execution take;
 * `topplings`: how many topplings did the sandpile take to stabilize during the execution of the last command;
+* `chips`: total number of chips in the sandpile;
 * `order`: the order of the recurrent sandpile (runs forever on a non-recurrent sandpile);
 * `recurrent`: check whether the sandpile is recurrent;
 * `eq`: check whether two sandpiles are equal (for infinite grids, the position of the origin is taken into account).

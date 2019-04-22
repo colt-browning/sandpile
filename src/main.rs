@@ -71,6 +71,9 @@ fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 	if config.topplings {
 		println!("Topplings: {}", a.last_topple());
 	}
+	if config.chips_count {
+		println!("Total chips count: {}", a.chips_count());
+	}
 	if config.order {
 		println!("Order: {}", a.as_finite_grid_sandpile()?.order());
 	}
@@ -106,6 +109,7 @@ struct Config {
 	eq: bool,
 	order: bool,
 	topplings: bool,
+	chips_count: bool,
 	time: bool,
 	actions: Vec<Action>,
 }
@@ -175,6 +179,7 @@ sandpile rectangle 60x50 ascii+png id out/id.png".to_owned());
 		let mut out_png = false;
 		let mut time = false;
 		let mut topplings = false;
+		let mut chips_count = false;
 		let mut order = false;
 		let mut eq = false;
 		let mut actions = Vec::new();
@@ -194,10 +199,11 @@ sandpile rectangle 60x50 ascii+png id out/id.png".to_owned());
 						"png" => out_png = true,
 						"time" => time = true,
 						"topplings" => topplings = true,
+						"chips" | "grains" => chips_count = true,
 						"order" => {group = true; order = true},
 						_ => return Err(format!("\
 Expected output format
-either '+'-separated 'ascii', 'png', 'time', 'topplings', and/or 'order'
+either '+'-separated 'ascii', 'png', 'time', 'topplings', 'chips', and/or 'order'
 or sole 'eq' or 'recurrent'.
 Got: {}", out))
 					}
@@ -253,6 +259,7 @@ Got: {}", out))
 			eq,
 			order,
 			topplings,
+			chips_count,
 			time,
 			actions,
 		})
