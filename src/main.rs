@@ -127,7 +127,7 @@ enum Action {
 }
 
 impl Config {
-	fn new(args: &mut std::iter::Iterator<Item = String>) -> Result<Config, String> {
+	fn new(args: &mut std::env::Args) -> Result<Config, String> {
 		args.next();
 		let grid_type_err = Err("\
 Please specify grid type ('rectangle', 'torus', or 'infinite') as the 1st command line argument.
