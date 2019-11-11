@@ -620,17 +620,7 @@ impl SandpileError {
 	}
 }
 
-pub fn png(grid: &Grid, fname: &str) -> io::Result<()> {
-	let colors = [
-		[0, 0, 0, 255],
-		[64, 128, 0, 255],
-		[118, 8, 170, 255],
-		[255, 214, 0, 255],
-		[255, 0, 0, 255],
-		[100, 100, 100, 255],
-		[0, 0, 255, 255],
-		[255, 255, 255, 255],
-	];
+pub fn png(grid: &Grid, fname: &str, colors: &Vec<[u8; 4]>) -> io::Result<()> {
 	let mut pixels = vec![0; grid.len() * grid[0].len() * 4];
 	let mut p = 0;
 	for row in grid {

@@ -9,6 +9,7 @@ use sandpile::{
 
 use std::{
 	io,
+	fs,
 	error::Error,
 };
 
@@ -86,9 +87,9 @@ fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 	if config.out_ascii {
 		print!("{}", a);
 	}
-	if let Some(mut filename) = config.out_png {
+	if let Some((mut filename, colors)) = config.out_png {
 		let g = a.into_grid();
-		while let Err(e) = png(&g, &filename) {
+		while let Err(e) = png(&g, &filename, &colors) {
 			eprintln!("Can't write to file {}. {}", filename, e);
 			eprintln!("Please enter correct name for output file:");
 			filename = String::new();
@@ -105,7 +106,7 @@ struct Config {
 	neighbourhood: Neighbourhood,
 	dimensions: (usize, usize),
 	out_ascii: bool,
-	out_png: Option<String>,
+	out_png: Option<(String, Vec<[u8; 4]>)>,
 	eq: bool,
 	order: bool,
 	topplings: bool,
@@ -241,12 +242,13 @@ Got: {}", out))
 		if *actions.last().unwrap() == Action::Dup {
 			return Err("'dup' duplicates the top sandpile on the stack, so at the point it occurs at least 2 commands should be expected, and at least 1 more command should follow.".to_owned());
 		}
-		let filename = if out_png {
+		let out_png = if out_png {
+			let colors = get_colors()?;
 			match args.next() {
-				Some(s) => s,
+				Some(filename) => Some((filename, colors)),
 				None => return Err("Please specify name for output png file as the final command line argument.".to_owned())
 			}
-		} else { String::new() };
+		} else { None };
 		if grid_type.finite().is_err() && group {
 			return Err("For the infinite grid, outputs 'order' and 'recurrent' and commands 'id', 'burn', and 'inverse' are impossible.".to_owned())
 		}
@@ -255,7 +257,7 @@ Got: {}", out))
 			neighbourhood,
 			dimensions: (x, y),
 			out_ascii,
-			out_png: if out_png { Some(filename) } else { None },
+			out_png,
 			eq,
 			order,
 			topplings,
@@ -288,4 +290,36 @@ fn read_list(x: usize, y: usize) -> Result<sandpile::Grid, Box<dyn Error>> {
 		grid[yc][xc] += 1;
 	}
 	Ok(grid)
+}
+
+fn hex_to_int(s: &str) -> Option<[u8; 4]> {
+	let ch: Vec<_> = s.chars().collect();
+	if ch.len() < 6 {
+		return None
+	}
+	let mut color = [255; 4];
+	for i in 0..3 {
+		color[2-i] = (ch[2*i].to_digit(16)? * 16 + ch[2*i+1].to_digit(16)?) as u8
+	}
+	Some(color)
+}
+
+fn get_colors() -> Result<Vec<[u8; 4]>, String> {
+	let colors_file = match fs::read_to_string("colors") {
+		Ok(s) => s,
+		Err(e) => return Err(e.to_string())
+	};
+	let mut colors = Vec::new();
+	for (n, line) in colors_file.lines().enumerate() {
+		if let Some(color) = hex_to_int(line) {
+			colors.push(color)
+		} else if n >= 2 {
+			break
+		} else {
+			return Err("\
+Less then 2 valid lines (beginning with 6 hex digits) found
+in the file 'colors', so sensible png output is impossible.".into())
+		}
+	}
+	Ok(colors)
 }
