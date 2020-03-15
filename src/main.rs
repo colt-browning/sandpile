@@ -11,6 +11,7 @@ use std::{
 	io,
 	fs,
 	error::Error,
+	convert::TryFrom,
 };
 
 fn main() {
@@ -49,7 +50,7 @@ fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 			},
 			Action::Inverse => {
 				let a = stack.pop().unwrap();
-				let g = a.as_finite_grid_sandpile()?.inverse();
+				let g = FiniteGridSandpile::try_from(&a)?.inverse();
 				stack.push(g)
 			}
 			Action::Add => {
@@ -76,7 +77,7 @@ fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 		println!("Total chips count: {}", a.chips_count());
 	}
 	if config.order {
-		println!("Order: {}", a.as_finite_grid_sandpile()?.order());
+		println!("Order: {}", FiniteGridSandpile::try_from(&a)?.order());
 	}
 	if config.time {
 		match time.elapsed() {
@@ -115,7 +116,7 @@ struct Config {
 	actions: Vec<Action>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 enum Action {
 	Id,
 	Burn,
@@ -317,7 +318,7 @@ fn get_colors() -> Result<Vec<[u8; 4]>, String> {
 			break
 		} else {
 			return Err("\
-Less then 2 valid lines (beginning with 6 hex digits) found
+Less than 2 valid lines (beginning with 6 hex digits) found
 in the file 'colors', so sensible png output is impossible.".into())
 		}
 	}
