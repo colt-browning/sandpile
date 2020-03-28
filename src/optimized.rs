@@ -115,9 +115,31 @@ impl<'a> FiniteGridSandpile<'a> {
 		}
 		GridSandpile::from_grid(GridType::Finite(FiniteGridType::Rectangular), Neighbourhood::VonNeumann, grid).unwrap()
 	}
+
+	pub(super) fn neutral_rect_vn_ee_optimized(x: usize, y: usize) -> GridSandpile { // ee = even even
+		let t = 6;
+		let mut symmetric_grid = vec![vec![t; x]; y];
+		topple_rect_vn_ee_optimized(&mut symmetric_grid);
+		for row in &mut symmetric_grid {
+			for el in row {
+				*el = t - *el;
+			}
+		}
+		topple_rect_vn_ee_optimized(&mut symmetric_grid);
+		let mut grid = Vec::new();
+		while let Some(mut s_row) = symmetric_grid.pop() {
+			let mut row: Vec<_> = s_row.clone().into_iter().rev().collect();
+			row.append(&mut s_row);
+			grid.push(row);
+		}
+		for i in 1..=y {
+			grid.push(grid[y-i].clone());
+		}
+		GridSandpile::from_grid(GridType::Finite(FiniteGridType::Rectangular), Neighbourhood::VonNeumann, grid).unwrap()
+	}
 }
 
-pub(super) fn topple_rect_vn_es_optimized(grid: &mut Vec<Vec<Cell>>) {
+pub(super) fn topple_rect_vn_es_optimized(grid: &mut Grid) {
 	let x = grid.len();
 	assert!(x > 2);
 	let mut ex_table = Vec::new();
@@ -203,6 +225,97 @@ pub(super) fn topple_rect_vn_es_optimized(grid: &mut Vec<Vec<Cell>>) {
 					j = 0;
 					i += 1;
 					if i == x {
+						break
+					}
+				}
+			}
+		}
+		excessive = ex2;
+	}
+}
+
+pub(super) fn topple_rect_vn_ee_optimized(grid: &mut Grid) {
+	let y = grid.len();
+	let x = grid[0].len();
+	assert!(x > 1 && y > 1);
+	let mut ex_table = vec![vec![true; x]; y];
+	let mut use_vec = false;
+	let lim = (x+y)/2 + x*y/50;
+	let mut excessive = Vec::new();
+	for i in 0..y {
+		for j in 0..x {
+			excessive.push((i, j));
+		}
+	}
+	let mut ex2;
+	while !use_vec || !excessive.is_empty() {
+		let use_vec_now = use_vec;
+		use_vec = true;
+		ex2 = Vec::with_capacity(lim+1);
+		let mut i = 0;
+		let mut j = 0;
+		loop {
+			if use_vec_now {
+				if let Some((ix, jx)) = excessive.pop() {
+					i = ix;
+					j = jx;
+				} else {
+					break
+				}
+			} else {
+				if !ex_table[i][j] {
+					j += 1;
+					if j >= x {
+						j = 0;
+						i += 1;
+						if i == y {
+							break
+						}
+					}
+					continue
+				}
+			}
+			ex_table[i][j] = false;
+			let d = grid[i][j] / 4;
+			if d == 0 {
+				continue;
+			}
+			grid[i][j] %= 4;
+			let topple_to: Vec<_> = match (i, j) {
+				(0, 0) => vec![(0, 0), (0, 0), (1, 0), (0, 1)],
+				(i, j) if i == y-1 && j == x-1 => vec![(y-1, x-2), (y-2, x-1)],
+				(i, 0) if i == y-1 => vec![(y-1, 0), (y-2, 0), (y-1, 1)],
+				(0, j) if j == x-1 => vec![(0, x-1), (0, x-2), (1, x-1)],
+				(i, j) if i == y-1 => vec![(y-1, j+1), (y-1, j-1), (y-2, j)],
+				(i, j) if j == x-1 => vec![(i+1, x-1), (i-1, x-1), (i, x-2)],
+				(i, 0) => vec![(i, 0), (i-1, 0), (i+1, 0), (i, 1)],
+				(0, j) => vec![(0, j), (0, j-1), (0, j+1), (1, j)],
+				(i, j) => vec![(i-1, j), (i+1, j), (i, j-1), (i, j+1)],
+			};
+			for (ti, tj) in topple_to {
+				grid[ti][tj] += d;
+				if let Some(p) = ex2.last() {
+					if *p == (ti, tj) {
+						continue
+					}
+				}
+				if grid[ti][tj] >= 4 {
+					ex_table[ti][tj] = true;
+					if use_vec {
+						ex2.push((ti, tj));
+						if ex2.len() >= lim {
+							ex2.clear();
+							use_vec = false;
+						}
+					}
+				}
+			}
+			if !use_vec_now {
+				j += 1;
+				if j >= x {
+					j = 0;
+					i += 1;
+					if i == y {
 						break
 					}
 				}

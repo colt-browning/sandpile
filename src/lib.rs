@@ -395,6 +395,8 @@ impl<'a> FiniteGridSandpile<'a> {
 	pub fn neutral(grid_type: FiniteGridType, neighbourhood: Neighbourhood, (x, y): (usize, usize)) -> GridSandpile {
 		if grid_type == FiniteGridType::Rectangular && neighbourhood == Neighbourhood::VonNeumann && x % 2 == 0 && y == x && x >= 6 {
 			return FiniteGridSandpile::neutral_rect_vn_es_optimized(x/2)
+		} else if grid_type == FiniteGridType::Rectangular && neighbourhood == Neighbourhood::VonNeumann && x % 2 == 0 && y % 2 == 0 && x >= 4 && y >= 4 {
+			return FiniteGridSandpile::neutral_rect_vn_ee_optimized(x/2, y/2)
 		}
 	// Proposition 6.36 of http://people.reed.edu/~davidp/divisors_and_sandpiles/
 		let t = 2 * (neighbourhood.neighbours() - 1);
@@ -536,7 +538,7 @@ mod tests {
 	}
 	
 	#[test]
-	fn id_rect_optimized() {
+	fn id_square_optimized() {
 		let s = FiniteGridSandpile::neutral(FiniteGridType::Rectangular, Neighbourhood::VonNeumann, (6, 6));
 		let g = s.into_grid();
 		assert_eq!(g, [
@@ -559,6 +561,22 @@ mod tests {
 			[0, 1, 3, 2, 2, 2, 2, 3, 1, 0],
 			[3, 2, 2, 3, 3, 3, 3, 2, 2, 3],
 			[3, 2, 2, 1, 2, 2, 1, 2, 2, 3],
+			[2, 3, 3, 0, 3, 3, 0, 3, 3, 2],
+		]);
+	}
+	
+	#[test]
+	fn id_rect_optimized() {
+		let s = FiniteGridSandpile::neutral(FiniteGridType::Rectangular, Neighbourhood::VonNeumann, (10, 8));
+		let g = s.into_grid();
+		assert_eq!(g, [
+			[2, 3, 3, 0, 3, 3, 0, 3, 3, 2],
+			[3, 2, 3, 2, 3, 3, 2, 3, 2, 3],
+			[3, 3, 0, 2, 2, 2, 2, 0, 3, 3],
+			[1, 3, 3, 3, 3, 3, 3, 3, 3, 1],
+			[1, 3, 3, 3, 3, 3, 3, 3, 3, 1],
+			[3, 3, 0, 2, 2, 2, 2, 0, 3, 3],
+			[3, 2, 3, 2, 3, 3, 2, 3, 2, 3],
 			[2, 3, 3, 0, 3, 3, 0, 3, 3, 2],
 		]);
 	}
