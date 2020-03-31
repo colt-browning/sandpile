@@ -393,17 +393,21 @@ impl<'a, 'b: 'a> TryFrom<&'b GridSandpile> for FiniteGridSandpile<'a> {
 
 impl<'a> FiniteGridSandpile<'a> {
 	pub fn neutral(grid_type: FiniteGridType, neighbourhood: Neighbourhood, (x, y): (usize, usize)) -> GridSandpile {
+		Self::neutral_plus(grid_type, neighbourhood, (x, y), 0)
+	}
+	
+	pub fn neutral_plus(grid_type: FiniteGridType, neighbourhood: Neighbourhood, (x, y): (usize, usize), plus: Cell) -> GridSandpile {
 		if grid_type == FiniteGridType::Rectangular && neighbourhood == Neighbourhood::VonNeumann && x % 2 == 0 && y == x && x >= 6 {
-			return FiniteGridSandpile::neutral_rect_vn_es_optimized(x/2)
+			return FiniteGridSandpile::neutral_plus_rect_vn_es_optimized(x/2, plus)
 		} else if grid_type == FiniteGridType::Rectangular && neighbourhood == Neighbourhood::VonNeumann && x % 2 == 0 && y % 2 == 0 && x >= 4 && y >= 4 {
-			return FiniteGridSandpile::neutral_rect_vn_ee_optimized(x/2, y/2)
+			return FiniteGridSandpile::neutral_plus_rect_vn_ee_optimized(x/2, y/2, plus)
 		}
 	// Proposition 6.36 of http://people.reed.edu/~davidp/divisors_and_sandpiles/
 		let t = 2 * (neighbourhood.neighbours() - 1);
 		let mut sandpile = GridSandpile::from_grid(GridType::Finite(grid_type), neighbourhood, vec![vec![t; x]; y]).unwrap();
 		for row in &mut sandpile.grid {
 			for el in row {
-				*el = t - *el;
+				*el = t + plus - *el;
 			}
 		}
 		sandpile.topple();
@@ -563,6 +567,22 @@ mod tests {
 			[3, 2, 2, 1, 2, 2, 1, 2, 2, 3],
 			[2, 3, 3, 0, 3, 3, 0, 3, 3, 2],
 		]);
+	}
+	
+	#[test]
+	fn id_plus() {
+		let p = 2;
+		let (x, y) = (7, 6);
+		let s1 = FiniteGridSandpile::neutral_plus(FiniteGridType::Rectangular, Neighbourhood::VonNeumann, (x, y), p);
+		let mut s2 = FiniteGridSandpile::neutral(FiniteGridType::Rectangular, Neighbourhood::VonNeumann, (x, y));
+		let s3 = GridSandpile {
+			grid_type: GridType::Finite(FiniteGridType::Rectangular),
+			neighbourhood: Neighbourhood::VonNeumann,
+			grid: vec![vec![p; x]; y],
+			last_topple: 0,
+		};
+		s2.add(&s3).unwrap();
+		assert_eq!(s1, s2);
 	}
 	
 	#[test]

@@ -88,13 +88,13 @@ impl GridSandpile {
 }
 
 impl<'a> FiniteGridSandpile<'a> {
-	pub(super) fn neutral_rect_vn_es_optimized(x: usize) -> GridSandpile { // es = even square
+	pub(super) fn neutral_plus_rect_vn_es_optimized(x: usize, plus: Cell) -> GridSandpile { // es = even square
 		let t = 6;
 		let mut symmetric_grid: Vec<_> = (0..x).map(|i| vec![t; i+1]).collect();
 		topple_rect_vn_es_optimized(&mut symmetric_grid);
 		for row in &mut symmetric_grid {
 			for el in row {
-				*el = t - *el;
+				*el = t + plus - *el;
 			}
 		}
 		topple_rect_vn_es_optimized(&mut symmetric_grid);
@@ -116,13 +116,13 @@ impl<'a> FiniteGridSandpile<'a> {
 		GridSandpile::from_grid(GridType::Finite(FiniteGridType::Rectangular), Neighbourhood::VonNeumann, grid).unwrap()
 	}
 
-	pub(super) fn neutral_rect_vn_ee_optimized(x: usize, y: usize) -> GridSandpile { // ee = even even
+	pub(super) fn neutral_plus_rect_vn_ee_optimized(x: usize, y: usize, plus: Cell) -> GridSandpile { // ee = even even
 		let t = 6;
 		let mut symmetric_grid = vec![vec![t; x]; y];
 		topple_rect_vn_ee_optimized(&mut symmetric_grid);
 		for row in &mut symmetric_grid {
 			for el in row {
-				*el = t - *el;
+				*el = t + plus - *el;
 			}
 		}
 		topple_rect_vn_ee_optimized(&mut symmetric_grid);
