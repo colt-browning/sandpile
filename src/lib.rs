@@ -628,6 +628,19 @@ mod tests {
 	}
 	
 	#[test]
+	fn infinite_delta00_moore_opt() {
+		let mut s = GridSandpile {
+			grid_type: GridType::Infinite(0, 0),
+			neighbourhood: Neighbourhood::Moore,
+			grid: vec![vec![500]],
+			last_topple: 0,
+		};
+		s.topple();
+		let s2 = GridSandpile::from_grid(GridType::Infinite(0, 0), Neighbourhood::Moore, vec![vec![500]]).unwrap();
+		assert_eq!(s.grid, s2.grid);
+	}
+	
+	#[test]
 	fn infinite_delta00_optimized() {
 		let mut s = GridSandpile {
 			grid_type: GridType::Infinite(0, 0),
