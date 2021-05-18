@@ -207,7 +207,7 @@ sandpile rectangle 60x50 ascii+png id out/id.png".to_owned());
 Expected output format
 either '+'-separated 'ascii', 'png', 'time', 'topplings', 'chips', and/or 'order'
 or sole 'eq' or 'recurrent'.
-Got: {}", out))
+Got: {}", s))
 					}
 				}
 			}
