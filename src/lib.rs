@@ -19,7 +19,7 @@ pub enum GridType {
 }
 
 impl GridType {
-	pub fn finite(&self) -> Result<FiniteGridType, SandpileError> {
+	pub const fn finite(&self) -> Result<FiniteGridType, SandpileError> {
 		if let GridType::Finite(t) = *self {
 			Ok(t)
 		} else {
@@ -41,7 +41,7 @@ pub enum Neighbourhood {
 }
 
 impl Neighbourhood {
-	fn neighbours(&self) -> Cell {
+	pub const fn neighbours(&self) -> Cell {
 		match *self {
 			Neighbourhood::VonNeumann => 4,
 			Neighbourhood::Moore => 8,
