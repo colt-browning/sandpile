@@ -1,8 +1,11 @@
 [package]
 name = "sandpile"
-version = "0.15.4"
-authors = ["Андрей Заболотский"]
-edition = "2018"
+version = "0.15.5"
+authors = ["Andrei Zabolotskii"]
+edition = "2024"
 
 [dependencies]
 repng="0.2.2"
+
+[profile.release]
+#debug = true

@@ -223,7 +223,7 @@ impl GridSandpile {
 			self.grid[0][0] = 0;
 		}
 		let mut excessive = Vec::new();
-		let mut ex2;
+		let mut ex2 = Vec::new();
 		for i in 0..self.grid.len() {
 			for j in 0..self.grid[i].len() {
 				if self.grid[i][j] >= self.neighbourhood.neighbours() {
@@ -232,10 +232,10 @@ impl GridSandpile {
 			}
 		}
 		let mut count = 0;
+		let mut topple_to = Vec::new();
 		while !excessive.is_empty() {
-			ex2 = Vec::new();
 			let (mut inc_i, mut inc_j) = (false, false);
-			for (i, j) in excessive {
+			for &(i, j) in &excessive {
 				let i = if inc_i { i+1 } else {i};
 				let j = if inc_j { j+1 } else {j};
 				let d = self.grid[i][j] / self.neighbourhood.neighbours();
@@ -244,7 +244,7 @@ impl GridSandpile {
 				}
 				self.grid[i][j] %= self.neighbourhood.neighbours();
 				count += d as u64;
-				let mut topple_to = Vec::new();
+				topple_to.clear();
 				match self.grid_type {
 					GridType::Finite(FiniteGridType::Rectangular) => {
 						if i > 0 {
@@ -348,14 +348,15 @@ impl GridSandpile {
 						}
 					},
 				};
-				for (ti, tj) in topple_to {
+				for &(ti, tj) in &topple_to {
 					self.grid[ti][tj] += d;
 					if self.grid[ti][tj] >= self.neighbourhood.neighbours() {
 						ex2.push((ti, tj));
 					}
 				}
 			}
-			excessive = ex2;
+			(excessive, ex2) = (ex2, excessive);
+			ex2.clear();
 		}
 		self.last_topple = count;
 		count
@@ -402,7 +403,7 @@ impl<'a> FiniteGridSandpile<'a> {
 		} else if grid_type == FiniteGridType::Rectangular && neighbourhood == Neighbourhood::VonNeumann && x % 2 == 0 && y % 2 == 0 && x >= 4 && y >= 4 {
 			return FiniteGridSandpile::neutral_plus_rect_vn_ee_optimized(x/2, y/2, plus)
 		}
-	// Proposition 6.36 of http://people.reed.edu/~davidp/divisors_and_sandpiles/
+	// Proposition 6.36 of https://people.reed.edu/~davidp/divisors_and_sandpiles/
 		let t = 2 * (neighbourhood.neighbours() - 1);
 		let mut sandpile = GridSandpile::from_grid(GridType::Finite(grid_type), neighbourhood, vec![vec![t; x]; y]).unwrap();
 		for row in &mut sandpile.grid {
@@ -492,14 +493,12 @@ impl fmt::Display for SandpileError {
 			SandpileError::EmptyGrid => write!(f, "Attempt to build a sandpile upon zero-size grid."),
 			SandpileError::EmptyFirstRow(_) => write!(f, "Sandpile grid has empty initial row."),
 			SandpileError::UnequalRowLengths(_, expected, n, got) =>
-				write!(f, "Sandpile grid does not represent rectangular matrix: initial row has length {}, row {} has length {}.",
-					expected, n, got),
+				write!(f, "Sandpile grid does not represent rectangular matrix: initial row has length {expected}, row {n} has length {got}."),
 			SandpileError::UnequalTypes(expected, got) =>
-				write!(f, "Adding sandpiles on grids of different types: {:?} and {:?}.", expected, got),
+				write!(f, "Adding sandpiles on grids of different types: {expected:?} and {got:?}."),
 			SandpileError::UnequalDimensions(self_x, self_y, other_x, other_y) =>
-				write!(f, "Incorrect dimensions of sandpile grids: expected {}x{}, got {}x{}.",
-					self_x, self_y, other_x, other_y),
-			SandpileError::UnknownSymbol(ch) => write!(f, "Unknown symbol in the text representation of a sandpile: {}", ch),
+				write!(f, "Incorrect dimensions of sandpile grids: expected {self_x}x{self_y}, got {other_x}x{other_y}."),
+			SandpileError::UnknownSymbol(ch) => write!(f, "Unknown symbol in the text representation of a sandpile: {ch}"),
 			SandpileError::Infinite => write!(f, "Attempted to view infinite sandpile as finite sandpile."),
 		}
 	}

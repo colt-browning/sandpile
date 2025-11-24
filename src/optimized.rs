@@ -6,11 +6,10 @@ impl GridSandpile {
 		assert_eq!(self.grid.len(), 1);
 		assert_eq!(self.grid[0].len(), 1);
 		let mut excessive = vec![(0, 0)];
-		let mut ex2;
+		let mut ex2 = vec![];
 		let mut count = 0;
 		while !excessive.is_empty() {
-			ex2 = Vec::new();
-			for (i, j) in excessive {
+			for &(i, j) in &excessive {
 				let d = self.grid[i][j] / self.neighbourhood.neighbours();
 				if d == 0 {
 					continue;
@@ -28,35 +27,34 @@ impl GridSandpile {
 					(i, j) if i == j => 4,
 					_ => 8,
 				} * d as u64;
-				let mut topple_to: Vec<_> = match (i, j) {
-					(0, 0) => vec![(1, 0)],
-					(1, 0) => vec![(2, 0), (0, 0), (1, 1), (1, 1)],
-					(1, 1) => vec![(1, 0), (1, 0), (2, 1)],
-					(i, 0) => vec![(i-1, 0), (i, 1), (i+1, 0)],
-					(2, 1) => vec![(1, 1), (1, 1), (2, 0), (2, 0), (2, 2), (2, 2), (3, 1)],
-					(i, j) if i == j => vec![(i, j-1), (i+1, j)],
-					(i, 1) => vec![(i, 0), (i, 0), (i-1, 1), (i, 2), (i+1, 1)],
-					(i, j) if i == j+1 => vec![(j, j), (j, j), (i, i), (i, i), (i+1, j), (i, j-1)],
-					(i, j) => vec![(i-1, j), (i, j+1), (i+1, j), (i, j-1)],
+				let topple_to = match (i, j) {
+					(0, 0) => &[(1, 0)][..],
+					(1, 0) => &[(2, 0), (0, 0), (1, 1), (1, 1)][..],
+					(1, 1) => &[(1, 0), (1, 0), (2, 1)][..],
+					(i, 0) => &[(i-1, 0), (i, 1), (i+1, 0)][..],
+					(2, 1) => &[(1, 1), (1, 1), (2, 0), (2, 0), (2, 2), (2, 2), (3, 1)][..],
+					(i, j) if i == j => &[(i, j-1), (i+1, j)][..],
+					(i, 1) => &[(i, 0), (i, 0), (i-1, 1), (i, 2), (i+1, 1)][..],
+					(i, j) if i == j+1 => &[(j, j), (j, j), (i, i), (i, i), (i+1, j), (i, j-1)][..],
+					(i, j) => &[(i-1, j), (i, j+1), (i+1, j), (i, j-1)][..],
 				};
-				if self.neighbourhood == Neighbourhood::Moore {
-					let mut t2: Vec<_> = match (i, j) {
-						(0, 0) => vec![(1, 1)],
-						(1, 0) => vec![(2, 1), (1, 0), (1, 0)],
-						(1, 1) => vec![(0, 0), (2, 0), (2, 0), (2, 2)],
-						(2, 0) => vec![(1, 1), (1, 1), (3, 1)],
-						(2, 1) => vec![(1, 0), (1, 0), (3, 0), (3, 0), (2, 1), (3, 2)],
-						(i, j) if i == j => vec![(i-1, j-1), (i+1, j-1), (i+1, j+1)],
-						(i, 0) => vec![(i-1, 1), (i+1, 1)],
-						(3, 1) => vec![(2, 0), (2, 0), (4, 0), (4, 0), (2, 2), (2, 2), (4, 2)],
-						(i, 1) => vec![(i-1, 0), (i-1, 0), (i+1, 0), (i+1, 0), (i-1, 2), (i+1, 2)],
-						(i, j) if i == j+1 => vec![(i-1, j-1), (i+1, j-1), (i+1, j+1), (i, j)],
-						(i, j) if i == j+2 => vec![(i-1, j-1), (i+1, j-1), (i+1, j+1), (i-1, j+1), (i-1, j+1)],
-						(i, j) => vec![(i-1, j-1), (i+1, j-1), (i+1, j+1), (i-1, j+1)],
-					};
-					topple_to.append(&mut t2);
-				}
-				for (ti, tj) in topple_to {
+				let topple_to_2 = if self.neighbourhood == Neighbourhood::Moore {
+					match (i, j) {
+						(0, 0) => &[(1, 1)][..],
+						(1, 0) => &[(2, 1), (1, 0), (1, 0)][..],
+						(1, 1) => &[(0, 0), (2, 0), (2, 0), (2, 2)][..],
+						(2, 0) => &[(1, 1), (1, 1), (3, 1)][..],
+						(2, 1) => &[(1, 0), (1, 0), (3, 0), (3, 0), (2, 1), (3, 2)][..],
+						(i, j) if i == j => &[(i-1, j-1), (i+1, j-1), (i+1, j+1)][..],
+						(i, 0) => &[(i-1, 1), (i+1, 1)][..],
+						(3, 1) => &[(2, 0), (2, 0), (4, 0), (4, 0), (2, 2), (2, 2), (4, 2)][..],
+						(i, 1) => &[(i-1, 0), (i-1, 0), (i+1, 0), (i+1, 0), (i-1, 2), (i+1, 2)][..],
+						(i, j) if i == j+1 => &[(i-1, j-1), (i+1, j-1), (i+1, j+1), (i, j)][..],
+						(i, j) if i == j+2 => &[(i-1, j-1), (i+1, j-1), (i+1, j+1), (i-1, j+1), (i-1, j+1)][..],
+						(i, j) => &[(i-1, j-1), (i+1, j-1), (i+1, j+1), (i-1, j+1)][..],
+					}
+				} else { &[] };
+				for &(ti, tj) in topple_to.iter().chain(topple_to_2.iter()) {
 					self.grid[ti][tj] += if (ti, tj) == (0, 0) {4*d} else {d};
 					if let Some(p) = ex2.last() {
 						if *p == (ti, tj) {
@@ -68,7 +66,8 @@ impl GridSandpile {
 					}
 				}
 			}
-			excessive = ex2;
+			(excessive, ex2) = (ex2, excessive);
+			ex2.clear();
 		}
 		self.last_topple = count;
 		self.grid_type = GridType::Infinite(self.grid.len()-1, self.grid.len()-1);
@@ -156,11 +155,10 @@ pub(super) fn topple_rect_vn_es_optimized(grid: &mut Grid) {
 			excessive.push((i, j));
 		}
 	}
-	let mut ex2;
+	let mut ex2 = Vec::with_capacity(lim+1);
 	while !use_vec || !excessive.is_empty() {
 		let use_vec_now = use_vec;
 		use_vec = true;
-		ex2 = Vec::with_capacity(lim+1);
 		let mut i = 0;
 		let mut j = 0;
 		loop {
@@ -190,19 +188,19 @@ pub(super) fn topple_rect_vn_es_optimized(grid: &mut Grid) {
 				continue;
 			}
 			grid[i][j] %= 4;
-			let topple_to: Vec<_> = match (i, j) {
-				(0, 0) => vec![(0, 0), (0, 0), (1, 0)],
-				(1, 0) => vec![(1, 0), (2, 0), (0, 0), (0, 0), (1, 1), (1, 1)],
-				(i, j) if i == x-1 && j == x-1 => vec![(x-1, x-2)],
-				(i, j) if i == j => vec![(i+1, i), (i, i-1)],
-				(i, 0) if i == x-1 => vec![(x-1, 0), (x-2, 0), (x-1, 1)],
-				(i, 0) => vec![(i, 0), (i-1, 0), (i+1, 0), (i, 1)],
-				(i, j) if i == x-1 && j == x-2 => vec![(x-1, x-1), (x-1, x-1), (x-2, x-2), (x-2, x-2), (x-1, x-3)],
-				(i, j) if j == i-1 => vec![(i-1, j), (i-1, j), (i, j+1), (i, j+1), (i, j-1), (i+1, j)],
-				(i, j) if i == x-1 => vec![(x-1, j-1), (x-1, j+1), (x-2, j)],
-				(i, j) => vec![(i-1, j), (i+1, j), (i, j-1), (i, j+1)],
+			let topple_to = match (i, j) {
+				(0, 0) => &[(0, 0), (0, 0), (1, 0)][..],
+				(1, 0) => &[(1, 0), (2, 0), (0, 0), (0, 0), (1, 1), (1, 1)][..],
+				(i, j) if i == x-1 && j == x-1 => &[(x-1, x-2)][..],
+				(i, j) if i == j => &[(i+1, i), (i, i-1)][..],
+				(i, 0) if i == x-1 => &[(x-1, 0), (x-2, 0), (x-1, 1)][..],
+				(i, 0) => &[(i, 0), (i-1, 0), (i+1, 0), (i, 1)][..],
+				(i, j) if i == x-1 && j == x-2 => &[(x-1, x-1), (x-1, x-1), (x-2, x-2), (x-2, x-2), (x-1, x-3)][..],
+				(i, j) if j == i-1 => &[(i-1, j), (i-1, j), (i, j+1), (i, j+1), (i, j-1), (i+1, j)][..],
+				(i, j) if i == x-1 => &[(x-1, j-1), (x-1, j+1), (x-2, j)][..],
+				(i, j) => &[(i-1, j), (i+1, j), (i, j-1), (i, j+1)][..],
 			};
-			for (ti, tj) in topple_to {
+			for &(ti, tj) in topple_to {
 				grid[ti][tj] += d;
 				if let Some(p) = ex2.last() {
 					if *p == (ti, tj) {
@@ -231,7 +229,8 @@ pub(super) fn topple_rect_vn_es_optimized(grid: &mut Grid) {
 				}
 			}
 		}
-		excessive = ex2;
+		(excessive, ex2) = (ex2, excessive);
+		ex2.clear();
 	}
 }
 
@@ -248,11 +247,10 @@ pub(super) fn topple_rect_vn_ee_optimized(grid: &mut Grid) {
 			excessive.push((i, j));
 		}
 	}
-	let mut ex2;
+	let mut ex2 = Vec::with_capacity(lim+1);
 	while !use_vec || !excessive.is_empty() {
 		let use_vec_now = use_vec;
 		use_vec = true;
-		ex2 = Vec::with_capacity(lim+1);
 		let mut i = 0;
 		let mut j = 0;
 		loop {
@@ -282,18 +280,18 @@ pub(super) fn topple_rect_vn_ee_optimized(grid: &mut Grid) {
 				continue;
 			}
 			grid[i][j] %= 4;
-			let topple_to: Vec<_> = match (i, j) {
-				(0, 0) => vec![(0, 0), (0, 0), (1, 0), (0, 1)],
-				(i, j) if i == y-1 && j == x-1 => vec![(y-1, x-2), (y-2, x-1)],
-				(i, 0) if i == y-1 => vec![(y-1, 0), (y-2, 0), (y-1, 1)],
-				(0, j) if j == x-1 => vec![(0, x-1), (0, x-2), (1, x-1)],
-				(i, j) if i == y-1 => vec![(y-1, j+1), (y-1, j-1), (y-2, j)],
-				(i, j) if j == x-1 => vec![(i+1, x-1), (i-1, x-1), (i, x-2)],
-				(i, 0) => vec![(i, 0), (i-1, 0), (i+1, 0), (i, 1)],
-				(0, j) => vec![(0, j), (0, j-1), (0, j+1), (1, j)],
-				(i, j) => vec![(i-1, j), (i+1, j), (i, j-1), (i, j+1)],
+			let topple_to = match (i, j) {
+				(0, 0) => &[(0, 0), (0, 0), (1, 0), (0, 1)][..],
+				(i, j) if i == y-1 && j == x-1 => &[(y-1, x-2), (y-2, x-1)][..],
+				(i, 0) if i == y-1 => &[(y-1, 0), (y-2, 0), (y-1, 1)][..],
+				(0, j) if j == x-1 => &[(0, x-1), (0, x-2), (1, x-1)][..],
+				(i, j) if i == y-1 => &[(y-1, j+1), (y-1, j-1), (y-2, j)][..],
+				(i, j) if j == x-1 => &[(i+1, x-1), (i-1, x-1), (i, x-2)][..],
+				(i, 0) => &[(i, 0), (i-1, 0), (i+1, 0), (i, 1)][..],
+				(0, j) => &[(0, j), (0, j-1), (0, j+1), (1, j)][..],
+				(i, j) => &[(i-1, j), (i+1, j), (i, j-1), (i, j+1)][..],
 			};
-			for (ti, tj) in topple_to {
+			for &(ti, tj) in topple_to {
 				grid[ti][tj] += d;
 				if let Some(p) = ex2.last() {
 					if *p == (ti, tj) {
@@ -322,6 +320,7 @@ pub(super) fn topple_rect_vn_ee_optimized(grid: &mut Grid) {
 				}
 			}
 		}
-		excessive = ex2;
+		(excessive, ex2) = (ex2, excessive);
+		ex2.clear();
 	}
 }

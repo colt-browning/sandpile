@@ -19,7 +19,7 @@ fn main() {
 		let config = Config::new(&mut std::env::args())?;
 		run(config)
 	})() {
-		eprintln!("{}", e);
+		eprintln!("{e}");
 	}
 }
 
@@ -82,16 +82,16 @@ fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
 	if config.time {
 		match time.elapsed() {
 			Ok(t) => println!("Total time taken: {}.{} s", t.as_secs(), t.subsec_millis()),
-			Err(e) => eprintln!("{}", e),
+			Err(e) => eprintln!("{e}"),
 		}
 	}
 	if config.out_ascii {
-		print!("{}", a);
+		print!("{a}");
 	}
 	if let Some((mut filename, colors)) = config.out_png {
 		let g = a.into_grid();
 		while let Err(e) = png(&g, &filename, &colors) {
-			eprintln!("Can't write to file {}. {}", filename, e);
+			eprintln!("Can't write to file {filename}. {e}");
 			eprintln!("Please enter correct name for output file:");
 			filename = String::new();
 			io::stdin().read_line(&mut filename)?;
@@ -207,7 +207,7 @@ sandpile rectangle 60x50 ascii+png id out/id.png".to_owned());
 Expected output format
 either '+'-separated 'ascii', 'png', 'time', 'topplings', 'chips', and/or 'order'
 or sole 'eq' or 'recurrent'.
-Got: {}", s))
+Got: {s}"))
 					}
 				}
 			}
@@ -235,7 +235,7 @@ Got: {}", s))
 				"inverse" => {group = true; (Action::Inverse, 1)},
 				"add" => (Action::Add, 2),
 				"dup" => (Action::Dup, 0),
-				s => return Err(format!("Unknown command: {}", s))
+				s => return Err(format!("Unknown command: {s}"))
 			};
 			actions.push(action);
 			actions_expected += incr - 1;
@@ -286,7 +286,7 @@ fn read_list(x: usize, y: usize) -> Result<sandpile::Grid, Box<dyn Error>> {
 		}
 		let (xc, yc): (usize, usize) = (ss[0].parse()?, ss[1].parse()?);
 		if xc >= x || yc >= y {
-			return Err(format!("Coordinates ({}, {}) out of bounds (0..{}, 0..{})", xc, yc, x, y).into())
+			return Err(format!("Coordinates ({xc}, {yc}) out of bounds (0..{x}, 0..{y})").into())
 		}
 		grid[yc][xc] += 1;
 	}
