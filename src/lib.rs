@@ -8,7 +8,7 @@ use std::{
 
 mod optimized;
 
-pub type Cell = u64;
+pub type Cell = u128;
 pub type Grid = Vec<Vec<Cell>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

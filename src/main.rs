@@ -230,7 +230,7 @@ Got: {s}"))
 				"read_list" => (Action::ReadList, 0),
 				s if s.starts_with("all-") => match s[4..].parse::<sandpile::Cell>() {
 					Ok(n) => (Action::All(n), 0),
-					Err(_e) => return Err("In command 'all-N', N must be a 64-bit number.".to_owned()),
+					Err(_e) => return Err("In command 'all-N', N must be a 128-bit number.".to_owned()),
 				},
 				"inverse" => {group = true; (Action::Inverse, 1)},
 				"add" => (Action::Add, 2),
