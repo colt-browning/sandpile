@@ -1,6 +1,6 @@
 [package]
 name = "sandpile"
-version = "0.15.5"
+version = "0.16.0"
 authors = ["Andrei Zabolotskii"]
 edition = "2024"
 
