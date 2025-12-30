@@ -132,7 +132,7 @@ impl Config {
 	fn new(args: &mut std::env::Args) -> Result<Config, String> {
 		args.next();
 		let grid_type_err = Err("\
-Please specify grid type ('rectangle', 'torus', or 'infinite') as the 1st command line argument.
+Please specify grid type ('rectangle', 'torus', 'infinite', or 'quadrant') as the 1st command line argument.
 To use Moore neighbourhood (8 neighbours), type 'rectangle.moore' etc.
 Example of a correct call (with cargo, use 'cargo run --release' instead of 'sandpile'):
 sandpile rectangle 60x50 ascii+png id out/id.png".to_owned());
@@ -149,6 +149,7 @@ sandpile rectangle 60x50 ascii+png id out/id.png".to_owned());
 		let grid_type = match grid_type {
 			"rectangle" | "rectangular" | "finite" => GridType::Finite(FiniteGridType::Rectangular),
 			"infinite" => GridType::Infinite(0, 0),
+			"quadrant" => GridType::Quadrant,
 			"torus" | "toroidal"  => GridType::Finite(FiniteGridType::Toroidal),
 			_ => return grid_type_err
 		};

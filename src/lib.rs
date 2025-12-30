@@ -15,6 +15,7 @@ pub type Grid = Vec<Vec<Cell>>;
 pub enum GridType {
 	Infinite(usize, usize),	// Auto-extending grid with no sink.
 	                       	// Origin at given position. No sandpile group.
+	Quadrant,
 	Finite(FiniteGridType),
 }
 
@@ -45,6 +46,13 @@ impl Neighbourhood {
 		match *self {
 			Neighbourhood::VonNeumann => 4,
 			Neighbourhood::Moore => 8,
+		}
+	}
+
+	pub const fn neighbours_directed(&self) -> Cell {
+		match *self {
+			Neighbourhood::VonNeumann => 2,
+			Neighbourhood::Moore => 3,
 		}
 	}
 }
@@ -201,13 +209,27 @@ impl GridSandpile {
 			return Err(SandpileError::UnequalDimensions(
 			self.grid.len(), self.grid[0].len(), p.grid.len(), p.grid[0].len()));
 		}
+		if p.grid_type == GridType::Quadrant {
+			let d = p.grid[0].len().saturating_sub(self.grid[0].len());
+			if d > 0 {
+				for row in self.grid.iter_mut() {
+					row.append(&mut vec![0; d]);
+				}
+			}
+			let d = p.grid.len().saturating_sub(self.grid.len());
+			if d > 0 {
+				for _ in 0..d {
+					self.grid.push(vec![0; self.grid[0].len()]);
+				}
+			}
+		}
 		self.add_grid_unchecked(&p.grid);
 		Ok(())
 	}
 	
 	fn add_grid_unchecked(&mut self, pgrid: &Grid) {
-		for i in 0..self.grid.len() {
-			for j in 0..self.grid[0].len() {
+		for i in 0..pgrid.len() {
+			for j in 0..pgrid[0].len() {
 				self.grid[i][j] += pgrid[i][j];
 			}
 		}
@@ -222,11 +244,16 @@ impl GridSandpile {
 		if self.grid_type == GridType::Finite(FiniteGridType::Toroidal) {
 			self.grid[0][0] = 0;
 		}
+		let neighbours = if self.grid_type == GridType::Quadrant {
+			self.neighbourhood.neighbours_directed()
+		} else {
+			self.neighbourhood.neighbours()
+		};
 		let mut excessive = Vec::new();
 		let mut ex2 = Vec::new();
 		for i in 0..self.grid.len() {
 			for j in 0..self.grid[i].len() {
-				if self.grid[i][j] >= self.neighbourhood.neighbours() {
+				if self.grid[i][j] >= neighbours {
 					excessive.push((i, j));
 				}
 			}
@@ -238,11 +265,11 @@ impl GridSandpile {
 			for &(i, j) in &excessive {
 				let i = if inc_i { i+1 } else {i};
 				let j = if inc_j { j+1 } else {j};
-				let d = self.grid[i][j] / self.neighbourhood.neighbours();
+				let d = self.grid[i][j] / neighbours;
 				if d == 0 {
 					continue;
 				}
-				self.grid[i][j] %= self.neighbourhood.neighbours();
+				self.grid[i][j] %= neighbours;
 				count += d as u64;
 				topple_to.clear();
 				match self.grid_type {
@@ -347,10 +374,25 @@ impl GridSandpile {
 							topple_to.push((i+1, j+1));
 						}
 					},
+					GridType::Quadrant => {
+						if j+1 == self.grid[0].len() {
+							for row in self.grid.iter_mut() {
+								row.push(0);
+							}
+						}
+						if i+1 == self.grid.len() {
+							self.grid.push(vec![0; self.grid[0].len()]);
+						}
+						topple_to.push((i+1, j));
+						topple_to.push((i, j+1));
+						if self.neighbourhood == Neighbourhood::Moore {
+							topple_to.push((i+1, j+1));
+						}
+					},
 				};
 				for &(ti, tj) in &topple_to {
 					self.grid[ti][tj] += d;
-					if self.grid[ti][tj] >= self.neighbourhood.neighbours() {
+					if self.grid[ti][tj] >= neighbours {
 						ex2.push((ti, tj));
 					}
 				}
