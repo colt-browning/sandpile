@@ -37,9 +37,8 @@ The underlying graph is always a rectangular grid. Various boundary conditions a
 * `rectangle`, finite grid with sink all around the grid;
 * `toroidal` grid with sink at the top-left node;
 * `infinite` auto-extending grid with no sink and no sandpile group (group operations are impossible).
-* `quadrant`, also infinite, with directed toppling only down and right.
 
-The default neighbourhood is the von Neumann neighbourhood (4 neighbours). To use Moore neighbourhood (8 neighbours), add `.moore` to the boundary condition, e. g., `rectangle.moore`.
+The default neighbourhood is the von Neumann neighbourhood (4 neighbours). To use Moore neighbourhood (8 neighbours), add `.moore` to the boundary condition, e. g., `rectangle.moore`. Use `.directed` for the directed neighbourhood: each node has indegree = outdegree = 2.
 
 The size of an `N` by `M` grid is specified as `NxM`; simply `N` means `NxN`.
 

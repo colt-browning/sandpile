@@ -5,6 +5,7 @@ impl GridSandpile {
 		assert_eq!(self.grid_type, GridType::Infinite(0, 0));
 		assert_eq!(self.grid.len(), 1);
 		assert_eq!(self.grid[0].len(), 1);
+		assert!(matches!(self.neighbourhood, Neighbourhood::Moore | Neighbourhood::VonNeumann));
 		let mut excessive = vec![(0, 0)];
 		let mut ex2 = vec![];
 		let mut count = 0;

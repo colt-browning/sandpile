@@ -15,7 +15,6 @@ pub type Grid = Vec<Vec<Cell>>;
 pub enum GridType {
 	Infinite(usize, usize),	// Auto-extending grid with no sink.
 	                       	// Origin at given position. No sandpile group.
-	Quadrant,
 	Finite(FiniteGridType),
 }
 
@@ -39,6 +38,7 @@ pub enum FiniteGridType {
 pub enum Neighbourhood {
 	VonNeumann,
 	Moore,
+	Directed,
 }
 
 impl Neighbourhood {
@@ -46,13 +46,7 @@ impl Neighbourhood {
 		match *self {
 			Neighbourhood::VonNeumann => 4,
 			Neighbourhood::Moore => 8,
-		}
-	}
-
-	pub const fn neighbours_directed(&self) -> Cell {
-		match *self {
-			Neighbourhood::VonNeumann => 2,
-			Neighbourhood::Moore => 3,
+			Neighbourhood::Directed => 2,
 		}
 	}
 }
@@ -127,7 +121,7 @@ impl GridSandpile {
 			grid,
 			last_topple: 0,
 		};
-		if grid_type == GridType::Infinite(0, 0) && sandpile.grid.len() == 1 && sandpile.grid[0].len() == 1 {
+		if grid_type == GridType::Infinite(0, 0) && sandpile.grid.len() == 1 && sandpile.grid[0].len() == 1 && neighbourhood != Neighbourhood::Directed {
 			sandpile.delta00_infinite_optimized();
 			return Ok(sandpile)
 		}
@@ -209,27 +203,13 @@ impl GridSandpile {
 			return Err(SandpileError::UnequalDimensions(
 			self.grid.len(), self.grid[0].len(), p.grid.len(), p.grid[0].len()));
 		}
-		if p.grid_type == GridType::Quadrant {
-			let d = p.grid[0].len().saturating_sub(self.grid[0].len());
-			if d > 0 {
-				for row in self.grid.iter_mut() {
-					row.append(&mut vec![0; d]);
-				}
-			}
-			let d = p.grid.len().saturating_sub(self.grid.len());
-			if d > 0 {
-				for _ in 0..d {
-					self.grid.push(vec![0; self.grid[0].len()]);
-				}
-			}
-		}
 		self.add_grid_unchecked(&p.grid);
 		Ok(())
 	}
 	
 	fn add_grid_unchecked(&mut self, pgrid: &Grid) {
-		for i in 0..pgrid.len() {
-			for j in 0..pgrid[0].len() {
+		for i in 0..self.grid.len() {
+			for j in 0..self.grid[0].len() {
 				self.grid[i][j] += pgrid[i][j];
 			}
 		}
@@ -244,16 +224,11 @@ impl GridSandpile {
 		if self.grid_type == GridType::Finite(FiniteGridType::Toroidal) {
 			self.grid[0][0] = 0;
 		}
-		let neighbours = if self.grid_type == GridType::Quadrant {
-			self.neighbourhood.neighbours_directed()
-		} else {
-			self.neighbourhood.neighbours()
-		};
 		let mut excessive = Vec::new();
 		let mut ex2 = Vec::new();
 		for i in 0..self.grid.len() {
 			for j in 0..self.grid[i].len() {
-				if self.grid[i][j] >= neighbours {
+				if self.grid[i][j] >= self.neighbourhood.neighbours() {
 					excessive.push((i, j));
 				}
 			}
@@ -265,51 +240,47 @@ impl GridSandpile {
 			for &(i, j) in &excessive {
 				let i = if inc_i { i+1 } else {i};
 				let j = if inc_j { j+1 } else {j};
-				let d = self.grid[i][j] / neighbours;
+				let d = self.grid[i][j] / self.neighbourhood.neighbours();
 				if d == 0 {
 					continue;
 				}
-				self.grid[i][j] %= neighbours;
+				self.grid[i][j] %= self.neighbourhood.neighbours();
 				count += d as u64;
 				topple_to.clear();
 				match self.grid_type {
-					GridType::Finite(FiniteGridType::Rectangular) => {
-						if i > 0 {
-							topple_to.push((i-1, j));
-						}
-						if j > 0 {
-							topple_to.push((i, j-1));
-						}
+					GridType::Finite(FiniteGridType::Rectangular) => (|| {
 						if i < self.grid.len()-1 {
 							topple_to.push((i+1, j));
 						}
 						if j < self.grid[i].len()-1 {
 							topple_to.push((i, j+1));
 						}
-						if self.neighbourhood == Neighbourhood::Moore {
-							if i > 0 && j > 0 {
-								topple_to.push((i-1, j-1));
-							}
-							if i > 0 && j < self.grid[i].len()-1 {
-								topple_to.push((i-1, j+1));
-							}
-							if i < self.grid.len()-1 && j > 0 {
-								topple_to.push((i+1, j-1));
-							}
-							if i < self.grid.len()-1 && j < self.grid[i].len()-1 {
-								topple_to.push((i+1, j+1));
-							}
+						if self.neighbourhood == Neighbourhood::Directed {
+							return
 						}
-					},
-					GridType::Finite(FiniteGridType::Toroidal) => {
-						let im1 = if i > 0 {i-1} else {self.grid.len()-1};
-						if !(im1 == 0 && j == 0) {
-							topple_to.push((im1, j));
+						if i > 0 {
+							topple_to.push((i-1, j));
 						}
-						let jm1 = if j > 0 {j-1} else {self.grid[0].len()-1};
-						if !(i == 0 && jm1 == 0) {
-							topple_to.push((i, jm1));
+						if j > 0 {
+							topple_to.push((i, j-1));
 						}
+						if self.neighbourhood != Neighbourhood::Moore {
+							return
+						}
+						if i > 0 && j > 0 {
+							topple_to.push((i-1, j-1));
+						}
+						if i > 0 && j < self.grid[i].len()-1 {
+							topple_to.push((i-1, j+1));
+						}
+						if i < self.grid.len()-1 && j > 0 {
+							topple_to.push((i+1, j-1));
+						}
+						if i < self.grid.len()-1 && j < self.grid[i].len()-1 {
+							topple_to.push((i+1, j+1));
+						}
+					})(),
+					GridType::Finite(FiniteGridType::Toroidal) => (|| {
 						let ip1 = if i < self.grid.len()-1 {i+1} else {0};
 						if !(ip1 == 0 && j == 0) {
 							topple_to.push((ip1, j));
@@ -318,24 +289,36 @@ impl GridSandpile {
 						if !(i == 0 && jp1 == 0) {
 							topple_to.push((i, jp1));
 						}
-						if self.neighbourhood == Neighbourhood::Moore {
-							if !(im1 == 0 && jm1 == 0) {
-								topple_to.push((im1, jm1));
-							}
-							if !(im1 == 0 && jp1 == 0) {
-								topple_to.push((im1, jp1));
-							}
-							if !(ip1 == 0 && jm1 == 0) {
-								topple_to.push((ip1, jm1));
-							}
-							if !(ip1 == 0 && jp1 == 0) {
-								topple_to.push((ip1, jp1));
-							}
+						if self.neighbourhood == Neighbourhood::Directed {
+							return
 						}
-					},
-					GridType::Infinite(oy, ox) => {
+						let im1 = if i > 0 {i-1} else {self.grid.len()-1};
+						if !(im1 == 0 && j == 0) {
+							topple_to.push((im1, j));
+						}
+						let jm1 = if j > 0 {j-1} else {self.grid[0].len()-1};
+						if !(i == 0 && jm1 == 0) {
+							topple_to.push((i, jm1));
+						}
+						if self.neighbourhood != Neighbourhood::Moore {
+							return
+						}
+						if !(im1 == 0 && jm1 == 0) {
+							topple_to.push((im1, jm1));
+						}
+						if !(im1 == 0 && jp1 == 0) {
+							topple_to.push((im1, jp1));
+						}
+						if !(ip1 == 0 && jm1 == 0) {
+							topple_to.push((ip1, jm1));
+						}
+						if !(ip1 == 0 && jp1 == 0) {
+							topple_to.push((ip1, jp1));
+						}
+					})(),
+					GridType::Infinite(oy, ox) => (|| {
 						let (mut i, mut j) = (i, j);
-						if j == 0 {
+						if j == 0 && self.neighbourhood != Neighbourhood::Directed {
 							for row in self.grid.iter_mut() {
 								row.insert(0, 0);
 							}
@@ -351,7 +334,7 @@ impl GridSandpile {
 								row.push(0);
 							}
 						}
-						if i == 0 {
+						if i == 0 && self.neighbourhood != Neighbourhood::Directed {
 							self.grid.insert(0, vec![0; self.grid[0].len()]);
 							for (ti, _) in ex2.iter_mut() {
 								*ti += 1;
@@ -363,36 +346,25 @@ impl GridSandpile {
 						if i + 1 == self.grid.len() {
 							self.grid.push(vec![0; self.grid[0].len()]);
 						}
+						topple_to.push((i+1, j));
+						topple_to.push((i, j+1));
+						if self.neighbourhood == Neighbourhood::Directed {
+							return
+						}
 						topple_to.push((i-1, j));
-						topple_to.push((i+1, j));
 						topple_to.push((i, j-1));
-						topple_to.push((i, j+1));
-						if self.neighbourhood == Neighbourhood::Moore {
-							topple_to.push((i-1, j-1));
-							topple_to.push((i+1, j-1));
-							topple_to.push((i-1, j+1));
-							topple_to.push((i+1, j+1));
+						if self.neighbourhood != Neighbourhood::Moore {
+							return
 						}
-					},
-					GridType::Quadrant => {
-						if j+1 == self.grid[0].len() {
-							for row in self.grid.iter_mut() {
-								row.push(0);
-							}
-						}
-						if i+1 == self.grid.len() {
-							self.grid.push(vec![0; self.grid[0].len()]);
-						}
-						topple_to.push((i+1, j));
-						topple_to.push((i, j+1));
-						if self.neighbourhood == Neighbourhood::Moore {
-							topple_to.push((i+1, j+1));
-						}
-					},
+						topple_to.push((i-1, j-1));
+						topple_to.push((i+1, j-1));
+						topple_to.push((i-1, j+1));
+						topple_to.push((i+1, j+1));
+					})(),
 				};
 				for &(ti, tj) in &topple_to {
 					self.grid[ti][tj] += d;
-					if self.grid[ti][tj] >= neighbours {
+					if self.grid[ti][tj] >= self.neighbourhood.neighbours() {
 						ex2.push((ti, tj));
 					}
 				}
@@ -462,16 +434,20 @@ impl<'a> FiniteGridSandpile<'a> {
 		match grid_type {
 			FiniteGridType::Rectangular => {
 				let border_neighbours = match neighbourhood {
-					Neighbourhood::VonNeumann => 1,
+					Neighbourhood::VonNeumann | Neighbourhood::Directed => 1,
 					Neighbourhood::Moore => 3,
 				};
 				for j in 0..x {
 					g[0][j] = border_neighbours;
-					g[y-1][j] += border_neighbours;
+					if neighbourhood != Neighbourhood::Directed {
+						g[y-1][j] += border_neighbours;
+					}
 				}
 				for i in 0..y {
 					g[i][0] += border_neighbours;
-					g[i][x-1] += border_neighbours;
+					if neighbourhood != Neighbourhood::Directed {
+						g[i][x-1] += border_neighbours;
+					}
 				}
 				if neighbourhood == Neighbourhood::Moore {
 					for &(i, j) in &[(0, 0), (0, x-1), (y-1, 0), (y-1, x-1)] {
@@ -480,8 +456,13 @@ impl<'a> FiniteGridSandpile<'a> {
 				}
 			},
 			FiniteGridType::Toroidal => {
-				for &(i, j) in &[(0, 1%x), (1%y, 0), (y-1, 0), (0, x-1)] {
+				for &(i, j) in &[(0, 1%x), (1%y, 0)] {
 					g[i][j] += 1;
+				}
+				if neighbourhood != Neighbourhood::Directed {
+					for &(i, j) in &[(y-1, 0), (0, x-1)] {
+						g[i][j] += 1;
+					}
 				}
 				if neighbourhood == Neighbourhood::Moore {
 					for &(i, j) in &[(1%y, 1%x), (1%y, x-1), (y-1, 1%x), (y-1, x-1)] {

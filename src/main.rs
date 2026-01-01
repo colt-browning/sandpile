@@ -132,8 +132,8 @@ impl Config {
 	fn new(args: &mut std::env::Args) -> Result<Config, String> {
 		args.next();
 		let grid_type_err = Err("\
-Please specify grid type ('rectangle', 'torus', 'infinite', or 'quadrant') as the 1st command line argument.
-To use Moore neighbourhood (8 neighbours), type 'rectangle.moore' etc.
+Please specify grid type ('rectangle', 'torus', or 'infinite') as the 1st command line argument.
+To use Moore neighbourhood (8 neighbours), type 'rectangle.moore' etc. Use '.directed' for the directed neighbourhood.
 Example of a correct call (with cargo, use 'cargo run --release' instead of 'sandpile'):
 sandpile rectangle 60x50 ascii+png id out/id.png".to_owned());
 		let grid_type = match args.next() {
@@ -144,12 +144,12 @@ sandpile rectangle 60x50 ascii+png id out/id.png".to_owned());
 		let (grid_type, neighbourhood) = (grid_type[0], match grid_type.len() {
 			1 => Neighbourhood::VonNeumann,
 			2 if grid_type[1] == "moore" => Neighbourhood::Moore,
+			2 if grid_type[1] == "directed" => Neighbourhood::Directed,
 			_ => return grid_type_err
 		});
 		let grid_type = match grid_type {
 			"rectangle" | "rectangular" | "finite" => GridType::Finite(FiniteGridType::Rectangular),
 			"infinite" => GridType::Infinite(0, 0),
-			"quadrant" => GridType::Quadrant,
 			"torus" | "toroidal"  => GridType::Finite(FiniteGridType::Toroidal),
 			_ => return grid_type_err
 		};
